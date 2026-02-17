@@ -5,7 +5,8 @@ import {
     FileText,
     Users,
     Settings,
-    LogOut
+    LogOut,
+    FileSignature
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { ThemeToggle } from './ThemeProvider'
@@ -13,6 +14,7 @@ import { ThemeToggle } from './ThemeProvider'
 const sidebarItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
     { icon: FileText, label: 'Invoices', href: '/invoices' },
+    { icon: FileSignature, label: 'Contracts', href: '/contracts' },
     { icon: Users, label: 'Clients', href: '/clients' },
     { icon: Settings, label: 'Settings', href: '/settings' },
 ]

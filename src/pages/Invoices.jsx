@@ -14,14 +14,18 @@ const TABS = [
     { key: 'all', label: 'All Invoices', icon: Inbox },
     { key: 'draft', label: 'Drafts', icon: FileEdit },
     { key: 'pending', label: 'Sent', icon: Send },
+    { key: 'approved', label: 'Approved', icon: CheckCircle2 },
     { key: 'paid', label: 'Paid', icon: CheckCircle2 },
+    { key: 'rejected', label: 'Rejected', icon: AlertCircle },
     { key: 'overdue', label: 'Overdue', icon: AlertCircle },
 ]
 
 const STATUS_CONFIG = {
     draft: { label: 'Draft', cls: 'bg-muted text-muted-foreground', dot: 'bg-gray-400' },
     pending: { label: 'Sent', cls: 'bg-blue-500/10 text-blue-600', dot: 'bg-blue-500' },
+    approved: { label: 'Approved', cls: 'bg-green-500/10 text-green-600', dot: 'bg-green-500' },
     paid: { label: 'Paid', cls: 'bg-green-500/10 text-green-600', dot: 'bg-green-500' },
+    rejected: { label: 'Rejected', cls: 'bg-red-500/10 text-red-600', dot: 'bg-red-500' },
     overdue: { label: 'Overdue', cls: 'bg-red-500/10 text-red-600', dot: 'bg-red-500' },
 }
 

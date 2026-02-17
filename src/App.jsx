@@ -6,6 +6,9 @@ import Dashboard from './pages/Dashboard'
 import Invoices from './pages/Invoices'
 import CreateInvoice from './pages/CreateInvoice'
 import InvoiceView from './pages/InvoiceView'
+import Contracts from './pages/Contracts'
+import CreateContract from './pages/CreateContract'
+import ContractView from './pages/ContractView'
 import Clients from './pages/Clients'
 import Settings from './pages/Settings'
 import DashboardLayout from './components/DashboardLayout'
@@ -18,12 +21,15 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/invoice/:token" element={<InvoiceView />} />
+      <Route path="/contract/:token" element={<ContractView />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/invoices/new" element={<CreateInvoice />} />
+          <Route path="/contracts" element={<Contracts />} />
+          <Route path="/contracts/new" element={<CreateContract />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/settings" element={<Settings />} />
         </Route>

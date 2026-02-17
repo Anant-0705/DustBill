@@ -29,7 +29,7 @@ export default function Login() {
 
             setSession(data.session)
             setUser(data.user)
-            navigate('/')
+            navigate('/dashboard')
         } catch (err) {
             setError(err.message)
         } finally {

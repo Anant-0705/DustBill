@@ -15,7 +15,9 @@ import { useAuthStore } from '../store/authStore'
 const STATUS_COLORS = {
     draft: { fill: '#94a3b8', label: 'Draft' },
     pending: { fill: '#3b82f6', label: 'Sent' },
+    approved: { fill: '#10b981', label: 'Approved' },
     paid: { fill: '#22c55e', label: 'Paid' },
+    rejected: { fill: '#ef4444', label: 'Rejected' },
     overdue: { fill: '#ef4444', label: 'Overdue' },
 }
 
