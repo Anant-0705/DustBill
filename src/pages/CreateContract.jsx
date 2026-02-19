@@ -143,55 +143,87 @@ export default function CreateContract() {
 
     return (
         <div ref={mainRef} className="-m-8 min-h-screen bg-background text-foreground">
-            <div className="max-w-[1440px] mx-auto px-6 pt-6 pb-6">
+            <div className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-6">
                 {/* ── Top header bar ── */}
                 <div
                     className="mb-5 transition-all duration-300 ease-in-out"
                     style={{
                         opacity: headerVisible ? 1 : 0,
-                        maxHeight: headerVisible ? '80px' : '0px',
+                        maxHeight: headerVisible ? '140px' : '0px',
                         marginBottom: headerVisible ? '20px' : '0px',
                         overflow: 'hidden',
                     }}
                 >
-                    <div className="bg-card rounded-2xl border border-border px-5 py-3 flex items-center justify-between shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => navigate('/contracts')}
-                                className="h-8 w-8 rounded-lg bg-muted hover:bg-accent flex items-center justify-center transition-colors"
-                            >
-                                <ArrowLeft className="h-4 w-4 text-muted-foreground" />
-                            </button>
-                            <h1 className="text-lg font-bold text-foreground">{editContract ? 'Edit Contract' : 'Create Contract'}</h1>
+                    <div className="bg-card rounded-2xl border border-border px-4 py-3 shadow-sm">
+                        {/* Row 1: back + title + desktop actions */}
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <button
+                                    onClick={() => navigate('/contracts')}
+                                    className="h-8 w-8 shrink-0 rounded-lg bg-muted hover:bg-accent flex items-center justify-center transition-colors"
+                                >
+                                    <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+                                </button>
+                                <h1 className="text-base font-bold text-foreground truncate">{editContract ? 'Edit Contract' : 'Create Contract'}</h1>
+                            </div>
+                            {/* Desktop buttons */}
+                            <div className="hidden lg:flex items-center gap-2 shrink-0">
+                                <button
+                                    onClick={() => setShowPreview(!showPreview)}
+                                    className="h-8 px-3.5 rounded-lg border border-border flex items-center gap-2 text-xs font-medium text-muted-foreground hover:bg-accent transition-colors"
+                                >
+                                    {showPreview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                    {showPreview ? 'Hide Preview' : 'Show Preview'}
+                                </button>
+                                <button
+                                    onClick={() => handleSubmit('draft')}
+                                    disabled={loading}
+                                    className="h-8 px-4 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
+                                >
+                                    <Save className="h-3.5 w-3.5" /> Save as Draft
+                                </button>
+                                <button
+                                    onClick={() => handleSubmit('sent')}
+                                    disabled={loading}
+                                    className="h-8 px-5 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 shadow-md"
+                                >
+                                    <Send className="h-3.5 w-3.5" />
+                                    {loading ? 'Saving...' : 'Save & Send'}
+                                </button>
+                            </div>
+                            {/* Mobile: preview toggle icon */}
+                            <div className="flex lg:hidden items-center shrink-0">
+                                <button
+                                    onClick={() => setShowPreview(!showPreview)}
+                                    className="h-8 w-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+                                    title={showPreview ? 'Hide Preview' : 'Show Preview'}
+                                >
+                                    {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setShowPreview(!showPreview)}
-                                className="h-8 px-3.5 rounded-lg border border-border flex items-center gap-2 text-xs font-medium text-muted-foreground hover:bg-accent transition-colors"
-                            >
-                                {showPreview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                                {showPreview ? 'Hide Preview' : 'Show Preview'}
-                            </button>
+                        {/* Row 2: mobile action buttons */}
+                        <div className="flex lg:hidden items-center gap-2 mt-2.5">
                             <button
                                 onClick={() => handleSubmit('draft')}
                                 disabled={loading}
-                                className="h-8 px-4 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
+                                className="flex-1 h-9 rounded-xl border border-border text-xs font-semibold text-foreground hover:bg-accent transition-colors flex items-center justify-center gap-1.5"
                             >
-                                <Save className="h-3.5 w-3.5" /> Save as Draft
+                                <Save className="h-3.5 w-3.5" /> Save Draft
                             </button>
                             <button
                                 onClick={() => handleSubmit('sent')}
                                 disabled={loading}
-                                className="h-8 px-5 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 shadow-md"
+                                className="flex-1 h-9 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary/90 transition-all flex items-center justify-center gap-1.5 shadow-sm"
                             >
                                 <Send className="h-3.5 w-3.5" />
-                                {loading ? 'Saving...' : 'Save & Send'}
+                                {loading ? 'Saving...' : 'Send Contract'}
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div className={`grid gap-6 ${showPreview ? 'lg:grid-cols-[1fr_480px]' : 'max-w-3xl mx-auto'}`}>
+                <div className={`grid gap-6 ${showPreview ? 'lg:grid-cols-[1fr_480px]' : ''}`}>
                     {/* ════════════ LEFT: FORM ════════════ */}
                     <div className="space-y-5">
                         {/* Basic Info */}
@@ -264,7 +296,7 @@ export default function CreateContract() {
 
                     {/* ════════════ RIGHT: PREVIEW ════════════ */}
                     {showPreview && (
-                        <div className="sticky top-6 self-start">
+                        <div className="lg:sticky lg:top-6 lg:self-start">
                             <div className="bg-card rounded-2xl border border-border shadow-lg overflow-hidden">
                                 <div className="bg-primary/5 border-b border-border px-6 py-3">
                                     <h3 className="text-sm font-bold text-foreground">Preview</h3>
