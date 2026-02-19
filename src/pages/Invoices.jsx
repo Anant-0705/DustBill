@@ -9,6 +9,7 @@ import {
 import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/authStore'
+import { emailService } from '../lib/emailService'
 
 const TABS = [
     { key: 'all', label: 'All Invoices', icon: Inbox },
@@ -222,13 +223,31 @@ export default function Invoices() {
         }
     }
 
-    async function markAsSent(id) {
+    async function markAsSent(invoice) {
         try {
-            const { error } = await supabase.from('invoices').update({ status: 'pending' }).eq('id', id)
+            // Update invoice status to pending (sent)
+            const { error } = await supabase.from('invoices').update({ 
+                status: 'pending',
+                client_email_sent: true,
+                updated_at: new Date().toISOString()
+            }).eq('id', invoice.id)
             if (error) throw error
-            setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, status: 'pending' } : inv))
+            
+            // Send email notification to client if they have an email
+            if (invoice.clients?.email) {
+                const emailResult = await emailService.sendInvoiceEmail(invoice, 'invoice_sent')
+                if (emailResult.success) {
+                    console.log('Invoice email sent successfully')
+                } else {
+                    console.warn('Failed to send invoice email:', emailResult.error)
+                }
+            }
+            
+            setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: 'pending', client_email_sent: true } : inv))
+            alert('Invoice sent to client!')
         } catch (error) {
             console.error('Update error:', error)
+            alert('Failed to send invoice. Please try again.')
         }
     }
 
@@ -242,7 +261,7 @@ export default function Invoices() {
                 navigate('/invoices/new', { state: { editInvoice: invoice } })
                 break
             case 'send':
-                markAsSent(invoice.id)
+                markAsSent(invoice)
                 break
             case 'copy':
                 navigator.clipboard.writeText(`${window.location.origin}/invoice/${invoice.share_token}`)

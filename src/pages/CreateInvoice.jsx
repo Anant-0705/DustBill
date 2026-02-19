@@ -1,8 +1,9 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Trash2, Plus, Save, ArrowLeft, Eye, EyeOff, Palette, X, Upload } from 'lucide-react'
+import { Trash2, Plus, Save, ArrowLeft, Eye, EyeOff, Palette, X, Upload, Send } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/authStore'
+import { emailService } from '../lib/emailService'
 
 const CURRENCIES = {
     USD: { symbol: '$', label: 'USD ($)' },
@@ -103,6 +104,13 @@ export default function CreateInvoice() {
 
     const handleSubmit = async (status = 'draft') => {
         if (!user) return
+
+        // Validate client email before sending
+        if (status === 'pending' && !client.email.trim()) {
+            alert('Please enter the client\'s email address before sending the invoice.')
+            return
+        }
+
         setLoading(true)
         try {
             if (editInvoice?.id) {
@@ -112,14 +120,70 @@ export default function CreateInvoice() {
                     .update({ status, amount: total, currency: invoiceDetails.currency, due_date: invoiceDetails.dueDate || null, items })
                     .eq('id', editInvoice.id)
                 if (invoiceError) throw invoiceError
+
+                // Send email if updating status to pending (sending to client)
+                if (status === 'pending' && editInvoice.clients?.email) {
+                    const invoiceWithClient = {
+                        ...editInvoice,
+                        status: 'pending',
+                        amount: total,
+                        clients: { ...editInvoice.clients, email: editInvoice.clients.email }
+                    }
+                    const emailResult = await emailService.sendInvoiceEmail(invoiceWithClient, 'invoice_sent')
+                    if (!emailResult.success) {
+                        console.error('Email failed:', emailResult.error)
+                        alert('Invoice saved, but failed to send email notification. Check your Supabase Edge Function and RESEND_API_KEY configuration.')
+                    }
+                }
             } else {
                 // ── Create new invoice ──
-                const { data: clientData, error: clientError } = await supabase
-                    .from('clients').insert({ user_id: user.id, name: client.name, email: client.email, phone: client.phone, address: client.address }).select().single()
-                if (clientError) throw clientError
-                const { error: invoiceError } = await supabase
-                    .from('invoices').insert({ user_id: user.id, client_id: clientData.id, status, amount: total, currency: invoiceDetails.currency, due_date: invoiceDetails.dueDate || null, items, share_token: crypto.randomUUID() }).select().single()
+                const shareToken = crypto.randomUUID()
+
+                // Check if client with that email already exists for this user
+                let clientId
+                const { data: existingClient } = await supabase
+                    .from('clients')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .eq('email', client.email)
+                    .maybeSingle()
+
+                if (existingClient) {
+                    // Update existing client with new info
+                    await supabase.from('clients')
+                        .update({ name: client.name, phone: client.phone, address: client.address })
+                        .eq('id', existingClient.id)
+                    clientId = existingClient.id
+                } else {
+                    // Create new client
+                    const { data: clientData, error: clientError } = await supabase
+                        .from('clients')
+                        .insert({ user_id: user.id, name: client.name, email: client.email, phone: client.phone, address: client.address })
+                        .select()
+                        .single()
+                    if (clientError) throw clientError
+                    clientId = clientData.id
+                }
+
+                const { data: newInvoice, error: invoiceError } = await supabase
+                    .from('invoices')
+                    .insert({ user_id: user.id, client_id: clientId, status, amount: total, currency: invoiceDetails.currency, due_date: invoiceDetails.dueDate || null, items, share_token: shareToken })
+                    .select()
+                    .single()
                 if (invoiceError) throw invoiceError
+
+                // Send email immediately if saving as pending (Send Invoice)
+                if (status === 'pending' && client.email) {
+                    const invoiceWithClient = {
+                        ...newInvoice,
+                        clients: { name: client.name, email: client.email }
+                    }
+                    const emailResult = await emailService.sendInvoiceEmail(invoiceWithClient, 'invoice_sent')
+                    if (!emailResult.success) {
+                        console.error('Email failed:', emailResult.error)
+                        alert('Invoice saved, but failed to send email notification. Check your Supabase Edge Function and RESEND_API_KEY configuration.')
+                    }
+                }
             }
             navigate('/invoices')
         } catch (error) {
@@ -192,7 +256,8 @@ export default function CreateInvoice() {
                                 className="h-8 px-5 rounded-xl text-xs font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 shadow-md"
                                 style={{ backgroundColor: brandColor }}
                             >
-                                {loading ? 'Saving...' : 'Save Invoice'}
+                                <Send className="h-3.5 w-3.5" />
+                                {loading ? 'Sending...' : 'Save & Send Invoice'}
                             </button>
                         </div>
                     </div>

@@ -4,6 +4,7 @@ create extension if not exists "uuid-ossp";
 -- PROFILES
 create table public.profiles (
   id uuid references auth.users not null primary key,
+  email text,
   first_name text,
   last_name text,
   business_name text,

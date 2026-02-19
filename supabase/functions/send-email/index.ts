@@ -40,8 +40,8 @@ serve(async (req) => {
         .from('email_logs')
         .select(`
           *,
-          invoices (*, clients (*)),
-          contracts (*, clients (*))
+          invoices (*, clients (*), user_id),
+          contracts (*, clients (*), user_id)
         `)
         .eq('id', emailLogId)
         .single()
@@ -51,8 +51,23 @@ serve(async (req) => {
         throw error
       }
       
-      console.log('Email data fetched:', JSON.stringify(emailData, null, 2))
       emailData = data
+      console.log('Email data fetched:', JSON.stringify(emailData, null, 2))
+      
+      // For freelancer-bound emails (approved, rejected, payment_received), 
+      // fetch the freelancer's email from auth.users
+      const freelancerEmailTypes = ['invoice_approved', 'invoice_rejected', 'payment_received']
+      if (freelancerEmailTypes.includes(emailData.email_type)) {
+        const userId = emailData.invoices?.user_id || emailData.contracts?.user_id
+        if (userId) {
+          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId)
+          if (!userError && userData?.user?.email) {
+            emailData.freelancer_email = userData.user.email
+            // Override recipient email to use actual freelancer email
+            emailData.recipient_email = userData.user.email
+          }
+        }
+      }
     }
 
     // Prepare email content
