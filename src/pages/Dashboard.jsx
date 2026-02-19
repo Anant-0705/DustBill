@@ -150,7 +150,7 @@ export default function Dashboard() {
     return (
         <div className="space-y-6">
             {/* ── Header ── */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight text-foreground">Dashboard</h2>
                     <p className="text-sm text-muted-foreground mt-0.5">
@@ -159,14 +159,14 @@ export default function Dashboard() {
                 </div>
                 <Link
                     to="/invoices/new"
-                    className="inline-flex items-center gap-2 h-10 px-5 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+                    className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm w-full sm:w-auto"
                 >
                     <Plus className="h-4 w-4" /> New Invoice
                 </Link>
             </div>
 
             {/* ── Stat Cards ── */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
                 {[
                     {
                         title: 'Total Revenue',
@@ -200,14 +200,14 @@ export default function Dashboard() {
                 ].map((stat, idx) => {
                     const Icon = stat.icon
                     return (
-                        <div key={idx} className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center justify-between mb-3">
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{stat.title}</p>
-                                <div className={`h-8 w-8 rounded-lg ${stat.accent} flex items-center justify-center`}>
-                                    <Icon className="h-4 w-4" />
+                        <div key={idx} className="bg-card rounded-2xl border border-border p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-center justify-between mb-2 sm:mb-3">
+                                <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider leading-tight">{stat.title}</p>
+                                <div className={`h-7 w-7 sm:h-8 sm:w-8 rounded-lg ${stat.accent} flex items-center justify-center shrink-0`}>
+                                    <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                 </div>
                             </div>
-                            <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                            <p className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</p>
                             <div className="flex items-center gap-2 mt-1">
                                 {stat.change !== undefined && (
                                     <span className={`inline-flex items-center gap-0.5 text-[11px] font-bold ${stat.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -223,7 +223,7 @@ export default function Dashboard() {
             </div>
 
             {/* ── Charts Row ── */}
-            <div className="grid gap-4 lg:grid-cols-7">
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
                 {/* Revenue Chart */}
                 <div className="lg:col-span-4 bg-card rounded-2xl border border-border p-5 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
@@ -316,25 +316,31 @@ export default function Dashboard() {
                         {recentInvoices.map((inv, idx) => {
                             const statusCfg = STATUS_COLORS[inv.status] || STATUS_COLORS.draft
                             return (
-                                <div key={inv.id} className={`flex items-center justify-between px-5 py-3 hover:bg-muted/30 transition-colors ${idx < recentInvoices.length - 1 ? 'border-b border-border' : ''}`}>
-                                    <div className="flex items-center gap-3 min-w-0">
+                                <div key={inv.id} className={`flex items-center justify-between px-4 sm:px-5 py-3 hover:bg-muted/30 transition-colors ${idx < recentInvoices.length - 1 ? 'border-b border-border' : ''}`}>
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
                                         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                                             <span className="text-xs font-bold text-primary">
                                                 {(inv.clients?.name || 'U').charAt(0).toUpperCase()}
                                             </span>
                                         </div>
-                                        <div className="min-w-0">
+                                        <div className="min-w-0 flex-1">
                                             <p className="text-sm font-semibold text-foreground truncate">{inv.clients?.name || 'Unknown'}</p>
-                                            <p className="text-[10px] text-muted-foreground font-mono">#{inv.id.slice(0, 8)}</p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <p className="text-[10px] text-muted-foreground font-mono">#{inv.id.slice(0, 8)}</p>
+                                                <span className="sm:hidden inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
+                                                    style={{ backgroundColor: statusCfg.fill + '1a', color: statusCfg.fill }}>
+                                                    {statusCfg.label}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold`}
+                                    <div className="flex items-center gap-3 shrink-0">
+                                        <span className={`hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold`}
                                             style={{ backgroundColor: statusCfg.fill + '1a', color: statusCfg.fill }}>
                                             <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusCfg.fill }} />
                                             {statusCfg.label}
                                         </span>
-                                        <p className="text-sm font-bold text-foreground w-24 text-right">
+                                        <p className="text-sm font-bold text-foreground text-right">
                                             {new Intl.NumberFormat('en-US', { style: 'currency', currency: inv.currency || 'USD' }).format(inv.amount)}
                                         </p>
                                     </div>

@@ -315,7 +315,7 @@ export default function Invoices() {
     return (
         <div className="space-y-6">
             {/* ── Header ── */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight text-foreground">Invoices</h2>
                     <p className="text-sm text-muted-foreground mt-0.5">
@@ -324,7 +324,7 @@ export default function Invoices() {
                 </div>
                 <Link
                     to="/invoices/new"
-                    className="inline-flex items-center gap-2 h-10 px-5 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+                    className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm w-full sm:w-auto"
                 >
                     <Plus className="h-4 w-4" /> New Invoice
                 </Link>
@@ -400,9 +400,9 @@ export default function Invoices() {
                     )}
                 </div>
             ) : (
-                <div className="bg-card rounded-2xl border border-border shadow-sm">
-                    {/* Table header */}
-                    <div className="grid grid-cols-12 gap-4 px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-b border-border bg-muted/30 rounded-t-2xl">
+                <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+                    {/* Desktop table header */}
+                    <div className="hidden sm:grid grid-cols-12 gap-4 px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-b border-border bg-muted/30">
                         <div className="col-span-4">Client</div>
                         <div className="col-span-2">Invoice</div>
                         <div className="col-span-2 text-right">Amount</div>
@@ -417,75 +417,91 @@ export default function Invoices() {
                         return (
                             <div
                                 key={invoice.id}
-                                className={`
-                                    grid grid-cols-12 gap-4 px-5 py-4 items-center transition-colors hover:bg-muted/30 group
-                                    ${!isLast ? 'border-b border-border' : ''}
-                                `}
+                                className={`transition-colors hover:bg-muted/30 group ${
+                                    !isLast ? 'border-b border-border' : ''
+                                }`}
                             >
-                                {/* Client */}
-                                <div className="col-span-4 flex items-center gap-3 min-w-0">
-                                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                {/* Mobile card view */}
+                                <div className="sm:hidden flex items-center gap-3 px-4 py-3.5">
+                                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                                         <span className="text-sm font-bold text-primary">
                                             {(invoice.clients?.name || 'U').charAt(0).toUpperCase()}
                                         </span>
                                     </div>
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-semibold text-foreground truncate">
-                                            {invoice.clients?.name || 'Unknown Client'}
-                                        </p>
-                                        <p className="text-[11px] text-muted-foreground truncate">
-                                            {invoice.clients?.email || '—'}
-                                        </p>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="text-sm font-semibold text-foreground truncate">{invoice.clients?.name || 'Unknown'}</p>
+                                            <p className="text-sm font-bold text-foreground shrink-0">{fmt(invoice.amount, invoice.currency)}</p>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-2 mt-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-muted-foreground font-mono">#{invoice.id.slice(0, 8)}</span>
+                                                {invoice.due_date && (
+                                                    <span className="text-[10px] text-muted-foreground">· Due {format(new Date(invoice.due_date), 'MMM d')}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusCfg.cls}`}>
+                                                    <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />
+                                                    {statusCfg.label}
+                                                </span>
+                                                <RowActions
+                                                    invoice={invoice}
+                                                    isOpen={openMenu === invoice.id}
+                                                    onToggle={() => setOpenMenu(openMenu === invoice.id ? null : invoice.id)}
+                                                    onAction={(action) => handleRowAction(invoice, action)}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Invoice number */}
-                                <div className="col-span-2">
-                                    <p className="text-xs font-mono text-muted-foreground">
-                                        #{invoice.id.slice(0, 8)}
-                                    </p>
-                                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                                        {invoice.due_date
-                                            ? format(new Date(invoice.due_date), 'MMM d, yyyy')
-                                            : '—'}
-                                    </p>
-                                </div>
-
-                                {/* Amount */}
-                                <div className="col-span-2 text-right">
-                                    <p className="text-sm font-bold text-foreground">
-                                        {fmt(invoice.amount, invoice.currency)}
-                                    </p>
-                                </div>
-
-                                {/* Status badge */}
-                                <div className="col-span-2 flex justify-center">
-                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusCfg.cls}`}>
-                                        <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />
-                                        {statusCfg.label}
-                                    </span>
-                                </div>
-
-                                {/* Actions */}
-                                <div className="col-span-2 flex items-center justify-end gap-1.5">
-                                    {/* Quick view button */}
-                                    {invoice.share_token && (
-                                        <button
-                                            onClick={() => window.open(`/invoice/${invoice.share_token}`, '_blank')}
-                                            className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
-                                            title="View invoice"
-                                        >
-                                            <Eye className="h-3.5 w-3.5" />
-                                        </button>
-                                    )}
-
-                                    {/* More actions */}
-                                    <RowActions
-                                        invoice={invoice}
-                                        isOpen={openMenu === invoice.id}
-                                        onToggle={() => setOpenMenu(openMenu === invoice.id ? null : invoice.id)}
-                                        onAction={(action) => handleRowAction(invoice, action)}
-                                    />
+                                {/* Desktop row view */}
+                                <div className="hidden sm:grid grid-cols-12 gap-4 px-5 py-4 items-center">
+                                    {/* Client */}
+                                    <div className="col-span-4 flex items-center gap-3 min-w-0">
+                                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                            <span className="text-sm font-bold text-primary">
+                                                {(invoice.clients?.name || 'U').charAt(0).toUpperCase()}
+                                            </span>
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-foreground truncate">{invoice.clients?.name || 'Unknown Client'}</p>
+                                            <p className="text-[11px] text-muted-foreground truncate">{invoice.clients?.email || '—'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <p className="text-xs font-mono text-muted-foreground">#{invoice.id.slice(0, 8)}</p>
+                                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                                            {invoice.due_date ? format(new Date(invoice.due_date), 'MMM d, yyyy') : '—'}
+                                        </p>
+                                    </div>
+                                    <div className="col-span-2 text-right">
+                                        <p className="text-sm font-bold text-foreground">{fmt(invoice.amount, invoice.currency)}</p>
+                                    </div>
+                                    <div className="col-span-2 flex justify-center">
+                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusCfg.cls}`}>
+                                            <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />
+                                            {statusCfg.label}
+                                        </span>
+                                    </div>
+                                    <div className="col-span-2 flex items-center justify-end gap-1.5">
+                                        {invoice.share_token && (
+                                            <button
+                                                onClick={() => window.open(`/invoice/${invoice.share_token}`, '_blank')}
+                                                className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                                                title="View invoice"
+                                            >
+                                                <Eye className="h-3.5 w-3.5" />
+                                            </button>
+                                        )}
+                                        <RowActions
+                                            invoice={invoice}
+                                            isOpen={openMenu === invoice.id}
+                                            onToggle={() => setOpenMenu(openMenu === invoice.id ? null : invoice.id)}
+                                            onAction={(action) => handleRowAction(invoice, action)}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         )

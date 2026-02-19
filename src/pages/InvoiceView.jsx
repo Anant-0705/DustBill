@@ -271,15 +271,15 @@ export default function InvoiceView() {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-3xl mx-auto space-y-8">
-                <div className="flex justify-between items-center no-print">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 no-print">
                     <div>
                         <h1 className="text-2xl font-bold">Invoice #{invoice.id.slice(0, 8)}</h1>
                         {invoice.status === 'pending' && (
                             <p className="text-sm text-muted-foreground mt-1">Please review and approve this invoice to proceed with payment</p>
                         )}
                     </div>
-                    <div className="space-x-2 flex items-center">
-                        <Button variant="outline" onClick={handlePrint}>
+                    <div className="flex flex-wrap gap-2 items-center">
+                        <Button variant="outline" onClick={handlePrint} className="w-full sm:w-auto">
                             <Download className="mr-2 h-4 w-4" /> Download PDF
                         </Button>
                         
@@ -304,16 +304,17 @@ export default function InvoiceView() {
                         {invoice.status === 'pending' && (
                             <>
                                 <Button 
-                                    variant="destructive" 
+                                    variant="destructive"
                                     onClick={() => setShowRejectModal(true)}
                                     disabled={actionLoading}
+                                    className="flex-1 sm:flex-none"
                                 >
                                     <XCircle className="mr-2 h-4 w-4" /> Reject
                                 </Button>
                                 <Button 
                                     onClick={handleApprove}
                                     disabled={actionLoading}
-                                    className="bg-green-600 hover:bg-green-700"
+                                    className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-none"
                                 >
                                     <CheckCircle2 className="mr-2 h-4 w-4" />
                                     {actionLoading ? 'Processing...' : 'Approve & Pay'}
@@ -323,7 +324,7 @@ export default function InvoiceView() {
                         
                         {/* Pay button for approved invoices */}
                         {invoice.status === 'approved' && (
-                            <Button onClick={handlePayment}>
+                            <Button onClick={handlePayment} className="w-full sm:w-auto">
                                 <CreditCard className="mr-2 h-4 w-4" /> Pay Now
                             </Button>
                         )}

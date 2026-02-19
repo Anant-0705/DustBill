@@ -118,7 +118,7 @@ export default function Clients() {
     return (
         <div className="space-y-6">
             {/* ── Header ── */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight text-foreground">Clients</h2>
                     <p className="text-sm text-muted-foreground mt-0.5">
@@ -127,14 +127,14 @@ export default function Clients() {
                 </div>
                 <button
                     onClick={openAddModal}
-                    className="inline-flex items-center gap-2 h-10 px-5 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+                    className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm w-full sm:w-auto"
                 >
                     <Plus className="h-4 w-4" /> Add Client
                 </button>
             </div>
 
             {/* ── Search ── */}
-            <div className="relative max-w-sm">
+            <div className="relative w-full sm:max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                     type="text"
@@ -185,8 +185,8 @@ export default function Clients() {
                                         )}
                                     </div>
                                 </div>
-                                {/* Actions */}
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {/* Actions — always visible on mobile, hover on desktop */}
+                                <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                     <button
                                         onClick={() => openEditModal(client)}
                                         className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"

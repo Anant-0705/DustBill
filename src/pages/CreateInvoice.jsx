@@ -203,61 +203,100 @@ export default function CreateInvoice() {
         <div ref={mainRef} className="-m-8 min-h-screen bg-background text-foreground" style={{ '--brand': brandColor }}>
 
             {/* ── Main content grid ── */}
-            <div className="max-w-[1440px] mx-auto px-6 pt-6 pb-6">
+            <div className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-6">
 
                 {/* ── Top header bar — slides up on scroll ── */}
                 <div
                     className="mb-5 transition-all duration-300 ease-in-out"
                     style={{
                         opacity: headerVisible ? 1 : 0,
-                        maxHeight: headerVisible ? '80px' : '0px',
+                        maxHeight: headerVisible ? '140px' : '0px',
                         marginBottom: headerVisible ? '20px' : '0px',
                         overflow: 'hidden',
                     }}
                 >
-                    <div className="bg-card rounded-2xl border border-border px-5 py-3 flex items-center justify-between shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => navigate('/invoices')}
-                                className="h-8 w-8 rounded-lg bg-muted hover:bg-accent flex items-center justify-center transition-colors"
-                            >
-                                <ArrowLeft className="h-4 w-4 text-muted-foreground" />
-                            </button>
-                            <h1 className="text-lg font-bold text-foreground">{editInvoice ? 'Edit Draft' : 'Create Invoice'}</h1>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            {/* Color picker */}
-                            <div className="relative">
+                    <div className="bg-card rounded-2xl border border-border px-4 py-3 shadow-sm">
+                        {/* Row 1: back button + title + (desktop: all actions) */}
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-3 min-w-0">
                                 <button
-                                    onClick={() => setShowColorPicker(!showColorPicker)}
-                                    className="h-8 px-3 rounded-lg border border-border flex items-center gap-2 text-xs font-medium text-muted-foreground hover:bg-accent transition-colors"
+                                    onClick={() => navigate('/invoices')}
+                                    className="h-8 w-8 shrink-0 rounded-lg bg-muted hover:bg-accent flex items-center justify-center transition-colors"
                                 >
-                                    <div className="h-4 w-4 rounded-full shadow-sm" style={{ backgroundColor: brandColor }} />
-                                    <Palette className="h-3.5 w-3.5" />
+                                    <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+                                </button>
+                                <h1 className="text-base font-bold text-foreground truncate">{editInvoice ? 'Edit Draft' : 'Create Invoice'}</h1>
+                            </div>
+                            {/* Desktop action buttons */}
+                            <div className="hidden lg:flex items-center gap-2 shrink-0">
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setShowColorPicker(!showColorPicker)}
+                                        className="h-8 px-3 rounded-lg border border-border flex items-center gap-2 text-xs font-medium text-muted-foreground hover:bg-accent transition-colors"
+                                    >
+                                        <div className="h-4 w-4 rounded-full shadow-sm" style={{ backgroundColor: brandColor }} />
+                                        <Palette className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={() => setShowPreview(!showPreview)}
+                                    className="h-8 px-3.5 rounded-lg border border-border flex items-center gap-2 text-xs font-medium text-muted-foreground hover:bg-accent transition-colors"
+                                >
+                                    {showPreview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                    {showPreview ? 'Hide Preview' : 'Show Preview'}
+                                </button>
+                                <button
+                                    onClick={() => handleSubmit('draft')}
+                                    disabled={loading}
+                                    className="h-8 px-4 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
+                                >
+                                    <Save className="h-3.5 w-3.5" /> Save as Draft
+                                </button>
+                                <button
+                                    onClick={() => handleSubmit('pending')}
+                                    disabled={loading}
+                                    className="h-8 px-5 rounded-xl text-xs font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 shadow-md"
+                                    style={{ backgroundColor: brandColor }}
+                                >
+                                    <Send className="h-3.5 w-3.5" />
+                                    {loading ? 'Sending...' : 'Save & Send Invoice'}
                                 </button>
                             </div>
-                            <button
-                                onClick={() => setShowPreview(!showPreview)}
-                                className="h-8 px-3.5 rounded-lg border border-border flex items-center gap-2 text-xs font-medium text-muted-foreground hover:bg-accent transition-colors"
-                            >
-                                {showPreview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                                {showPreview ? 'Hide Preview' : 'Show Preview'}
-                            </button>
+                            {/* Mobile: compact color + preview toggle */}
+                            <div className="flex lg:hidden items-center gap-2 shrink-0">
+                                <button
+                                    onClick={() => setShowColorPicker(!showColorPicker)}
+                                    className="h-8 w-8 rounded-lg border border-border flex items-center justify-center transition-colors hover:bg-accent"
+                                    title="Brand color"
+                                >
+                                    <div className="h-4 w-4 rounded-full shadow-sm" style={{ backgroundColor: brandColor }} />
+                                </button>
+                                <button
+                                    onClick={() => setShowPreview(!showPreview)}
+                                    className="h-8 w-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+                                    title={showPreview ? 'Hide Preview' : 'Show Preview'}
+                                >
+                                    {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
+                        </div>
+                        {/* Row 2: mobile action buttons */}
+                        <div className="flex lg:hidden items-center gap-2 mt-2.5">
                             <button
                                 onClick={() => handleSubmit('draft')}
                                 disabled={loading}
-                                className="h-8 px-4 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
+                                className="flex-1 h-9 rounded-xl border border-border text-xs font-semibold text-foreground hover:bg-accent transition-colors flex items-center justify-center gap-1.5"
                             >
-                                <Save className="h-3.5 w-3.5" /> Save as Draft
+                                <Save className="h-3.5 w-3.5" /> Save Draft
                             </button>
                             <button
                                 onClick={() => handleSubmit('pending')}
                                 disabled={loading}
-                                className="h-8 px-5 rounded-xl text-xs font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 shadow-md"
+                                className="flex-1 h-9 rounded-xl text-xs font-semibold text-white transition-all flex items-center justify-center gap-1.5 shadow-sm"
                                 style={{ backgroundColor: brandColor }}
                             >
                                 <Send className="h-3.5 w-3.5" />
-                                {loading ? 'Sending...' : 'Save & Send Invoice'}
+                                {loading ? 'Sending...' : 'Send Invoice'}
                             </button>
                         </div>
                     </div>
@@ -265,7 +304,7 @@ export default function CreateInvoice() {
 
                 {/* Color picker dropdown */}
                 {showColorPicker && (
-                    <div className="fixed top-28 right-10 z-40 bg-card rounded-2xl border border-border shadow-xl p-4 w-64">
+                    <div className="fixed top-auto bottom-4 right-4 sm:top-28 sm:bottom-auto sm:right-10 z-40 bg-card rounded-2xl border border-border shadow-xl p-4 w-64">
                         <div className="flex items-center justify-between mb-3">
                             <span className="text-xs font-bold text-foreground">Brand Color</span>
                             <button onClick={() => setShowColorPicker(false)}><X className="h-3.5 w-3.5 text-muted-foreground" /></button>
@@ -287,7 +326,7 @@ export default function CreateInvoice() {
                         </div>
                     </div>
                 )}
-                <div className={`grid gap-6 ${showPreview ? 'lg:grid-cols-[1fr_480px]' : 'max-w-3xl mx-auto'}`}>
+                <div className={`grid gap-6 ${showPreview ? 'lg:grid-cols-[1fr_480px]' : ''}`}>
 
                     {/* ════════════ LEFT: FORM ════════════ */}
                     <div className="space-y-5">
@@ -489,22 +528,12 @@ export default function CreateInvoice() {
                                 onChange={(e) => setInvoiceDetails({ ...invoiceDetails, notes: e.target.value })} />
                         </div>
 
-                        {/* Mobile actions */}
-                        <div className="flex items-center gap-3 lg:hidden pb-6">
-                            <button onClick={() => navigate('/invoices')}
-                                className="flex-1 h-11 rounded-xl border border-border text-sm font-semibold text-foreground hover:bg-accent transition-colors">Cancel</button>
-                            <button onClick={() => handleSubmit('draft')} disabled={loading}
-                                className="flex-1 h-11 rounded-xl border border-border text-sm font-semibold text-foreground hover:bg-accent transition-colors">Save as Draft</button>
-                            <button onClick={() => handleSubmit('pending')} disabled={loading}
-                                className="flex-1 h-11 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02]"
-                                style={{ backgroundColor: brandColor }}>{loading ? 'Saving...' : 'Save'}</button>
-                        </div>
+
                     </div>
 
                     {/* ════════════ RIGHT: LIVE PREVIEW (larger) ════════════ */}
                     {showPreview && (
-                        <div className="hidden lg:block">
-                            <div className="sticky top-4">
+                        <div className="lg:sticky lg:top-4 lg:self-start">
                                 <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
                                     {/* Preview header */}
                                     <div className="px-5 py-3 border-b border-border flex items-center justify-between bg-muted/40">
@@ -622,7 +651,6 @@ export default function CreateInvoice() {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
                         </div>
                     )}
                 </div>
