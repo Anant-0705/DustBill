@@ -135,7 +135,7 @@ export default function ContractView() {
         <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header Actions */}
-                <div className="flex justify-between items-start no-print">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 no-print">
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             {contract.status === 'accepted' && (
@@ -160,18 +160,18 @@ export default function ContractView() {
                         </p>
                     </div>
                     {contract.status === 'sent' && (
-                        <div className="flex gap-3">
+                        <div className="flex flex-wrap gap-3">
                             <button
                                 onClick={() => setShowRejectModal(true)}
                                 disabled={actionLoading}
-                                className="inline-flex items-center gap-2 h-10 px-5 rounded-xl text-sm font-semibold text-red-600 border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50"
+                                className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl text-sm font-semibold text-red-600 border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50 flex-1 sm:flex-none"
                             >
                                 <XCircle className="h-4 w-4" /> Reject
                             </button>
                             <button
                                 onClick={handleAccept}
                                 disabled={actionLoading}
-                                className="inline-flex items-center gap-2 h-10 px-5 rounded-xl text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50 shadow-sm"
+                                className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50 shadow-sm flex-1 sm:flex-none"
                             >
                                 <CheckCircle2 className="h-4 w-4" />
                                 {actionLoading ? 'Processing...' : 'Accept Contract'}

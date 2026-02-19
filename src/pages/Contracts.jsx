@@ -310,7 +310,7 @@ export default function Contracts() {
     return (
         <div className="space-y-6">
             {/* ── Header ── */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight text-foreground">Contracts</h2>
                     <p className="text-sm text-muted-foreground mt-0.5">
@@ -319,7 +319,7 @@ export default function Contracts() {
                 </div>
                 <Link
                     to="/contracts/new"
-                    className="inline-flex items-center gap-2 h-10 px-5 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+                    className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm w-full sm:w-auto"
                 >
                     <Plus className="h-4 w-4" /> New Contract
                 </Link>
@@ -386,69 +386,92 @@ export default function Contracts() {
                     )}
                 </div>
             ) : (
-                <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-muted/50 border-b border-border">
-                                <tr>
-                                    <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">Title</th>
-                                    <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">Client</th>
-                                    <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">Status</th>
-                                    <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">Created</th>
-                                    <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-3">Signed</th>
-                                    <th className="w-12 px-6 py-3"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {filtered.map(contract => {
-                                    const statusConfig = STATUS_CONFIG[contract.status] || STATUS_CONFIG.draft
-                                    return (
-                                        <tr key={contract.id} className="group hover:bg-muted/30 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                                                        <FileText className="h-4 w-4 text-primary" />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-sm font-semibold text-foreground truncate">{contract.title}</p>
-                                                        {contract.description && (
-                                                            <p className="text-xs text-muted-foreground truncate">{contract.description}</p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm text-foreground">{contract.clients?.name || 'N/A'}</div>
-                                                {contract.clients?.email && (
-                                                    <div className="text-xs text-muted-foreground">{contract.clients.email}</div>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig.cls}`}>
-                                                    <span className={`h-1.5 w-1.5 rounded-full ${statusConfig.dot}`} />
-                                                    {statusConfig.label}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-muted-foreground">
-                                                {format(new Date(contract.created_at), 'MMM d, yyyy')}
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-muted-foreground">
-                                                {contract.signed_date ? format(new Date(contract.signed_date), 'MMM d, yyyy') : '—'}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <RowActions
-                                                    contract={contract}
-                                                    isOpen={openMenu === contract.id}
-                                                    onToggle={() => setOpenMenu(openMenu === contract.id ? null : contract.id)}
-                                                    onAction={(action) => handleRowAction(contract, action)}
-                                                />
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
+                <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+                    {/* Desktop table header */}
+                    <div className="hidden sm:grid grid-cols-12 gap-4 px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-b border-border bg-muted/30">
+                        <div className="col-span-4">Title</div>
+                        <div className="col-span-3">Client</div>
+                        <div className="col-span-2">Status</div>
+                        <div className="col-span-2">Created</div>
+                        <div className="col-span-1 text-right">Actions</div>
                     </div>
+
+                    {filtered.map((contract, idx) => {
+                        const statusConfig = STATUS_CONFIG[contract.status] || STATUS_CONFIG.draft
+                        const isLast = idx === filtered.length - 1
+                        return (
+                            <div
+                                key={contract.id}
+                                className={`transition-colors hover:bg-muted/30 group ${
+                                    !isLast ? 'border-b border-border' : ''
+                                }`}
+                            >
+                                {/* Mobile card */}
+                                <div className="sm:hidden flex items-center gap-3 px-4 py-3.5">
+                                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                                        <FileText className="h-4.5 w-4.5 text-primary" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="text-sm font-semibold text-foreground truncate">{contract.title}</p>
+                                            <RowActions
+                                                contract={contract}
+                                                isOpen={openMenu === contract.id}
+                                                onToggle={() => setOpenMenu(openMenu === contract.id ? null : contract.id)}
+                                                onAction={(action) => handleRowAction(contract, action)}
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <p className="text-xs text-muted-foreground truncate">{contract.clients?.name || 'No client'}</p>
+                                            <span className="text-muted-foreground/40">·</span>
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusConfig.cls}`}>
+                                                <span className={`h-1.5 w-1.5 rounded-full ${statusConfig.dot}`} />
+                                                {statusConfig.label}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Desktop row */}
+                                <div className="hidden sm:grid grid-cols-12 gap-4 px-5 py-4 items-center">
+                                    <div className="col-span-4 flex items-center gap-3 min-w-0">
+                                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                            <FileText className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-foreground truncate">{contract.title}</p>
+                                            {contract.description && (
+                                                <p className="text-xs text-muted-foreground truncate">{contract.description}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="col-span-3">
+                                        <p className="text-sm text-foreground">{contract.clients?.name || 'N/A'}</p>
+                                        {contract.clients?.email && (
+                                            <p className="text-xs text-muted-foreground truncate">{contract.clients.email}</p>
+                                        )}
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig.cls}`}>
+                                            <span className={`h-1.5 w-1.5 rounded-full ${statusConfig.dot}`} />
+                                            {statusConfig.label}
+                                        </span>
+                                    </div>
+                                    <div className="col-span-2 text-sm text-muted-foreground">
+                                        {format(new Date(contract.created_at), 'MMM d, yyyy')}
+                                    </div>
+                                    <div className="col-span-1 flex justify-end">
+                                        <RowActions
+                                            contract={contract}
+                                            isOpen={openMenu === contract.id}
+                                            onToggle={() => setOpenMenu(openMenu === contract.id ? null : contract.id)}
+                                            onAction={(action) => handleRowAction(contract, action)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })}
                 </div>
             )}
         </div>

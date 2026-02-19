@@ -6,7 +6,8 @@ import {
     Users,
     Settings,
     LogOut,
-    FileSignature
+    FileSignature,
+    X
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { ThemeToggle } from './ThemeProvider'
@@ -19,31 +20,40 @@ const sidebarItems = [
     { icon: Settings, label: 'Settings', href: '/settings' },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ onClose }) {
     const location = useLocation()
     const { signOut } = useAuthStore()
 
     return (
         <div className="flex h-screen w-64 flex-col border-r bg-card">
-            <div className="flex h-16 items-center border-b px-6">
-                <h1 className="text-2xl font-bold text-A582F7">Dustbill</h1>
+            <div className="flex h-16 items-center justify-between border-b px-6">
+                <h1 className="text-2xl font-bold" style={{ color: '#A582F7' }}>Dustbill</h1>
+                {onClose && (
+                    <button
+                        onClick={onClose}
+                        className="md:hidden h-8 w-8 rounded-lg flex items-center justify-center hover:bg-accent transition-colors"
+                    >
+                        <X className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                )}
             </div>
             <nav className="flex-1 space-y-1 p-4">
                 {sidebarItems.map((item) => {
                     const Icon = item.icon
-                    const isActive = location.pathname === item.href
+                    const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/')
                     return (
                         <Link
                             key={item.href}
                             to={item.href}
+                            onClick={onClose}
                             className={cn(
-                                "flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                                "flex items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                                 isActive
                                     ? "bg-primary text-primary-foreground"
                                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                             )}
                         >
-                            <Icon className="h-5 w-5" />
+                            <Icon className="h-5 w-5 shrink-0" />
                             <span>{item.label}</span>
                         </Link>
                     )

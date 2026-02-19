@@ -90,27 +90,29 @@ export default function Settings() {
             </div>
 
             {/* ── Tabs ── */}
-            <div className="flex gap-1 bg-muted/50 rounded-xl p-1 w-fit">
-                {TABS.map(tab => {
-                    const Icon = tab.icon
-                    const isActive = activeTab === tab.key
-                    return (
-                        <button
-                            key={tab.key}
-                            onClick={() => setActiveTab(tab.key)}
-                            className={`
-                                flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all
-                                ${isActive
-                                    ? 'bg-card text-foreground shadow-sm'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-card/50'
-                                }
-                            `}
-                        >
-                            <Icon className="h-3.5 w-3.5" />
-                            {tab.label}
-                        </button>
-                    )
-                })}
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                <div className="flex gap-1 bg-muted/50 rounded-xl p-1 w-max min-w-full sm:w-fit">
+                    {TABS.map(tab => {
+                        const Icon = tab.icon
+                        const isActive = activeTab === tab.key
+                        return (
+                            <button
+                                key={tab.key}
+                                onClick={() => setActiveTab(tab.key)}
+                                className={`
+                                    flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all shrink-0
+                                    ${isActive
+                                        ? 'bg-card text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-card/50'
+                                    }
+                                `}
+                            >
+                                <Icon className="h-3.5 w-3.5" />
+                                {tab.label}
+                            </button>
+                        )
+                    })}
+                </div>
             </div>
 
             {/* ── Tab Content ── */}
