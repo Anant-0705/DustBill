@@ -56,14 +56,19 @@ export default function InvoiceView() {
 
             if (error) throw error
 
-            // Log email notification
-            await supabase.from('email_logs').insert({
+            // Log and send email notification to freelancer
+            const { data: emailLog, error: emailError } = await supabase.from('email_logs').insert({
                 invoice_id: invoice.id,
-                recipient_email: invoice.profiles?.business_name || 'freelancer',
+                recipient_email: invoice.profiles?.email || invoice.profiles?.business_name || 'freelancer',
                 email_type: 'invoice_approved',
                 subject: `Invoice Approved: #${invoice.id.slice(0, 8)}`,
                 status: 'pending'
-            })
+            }).select().single()
+
+            // Trigger Edge Function to send the email
+            if (!emailError && emailLog) {
+                await supabase.functions.invoke('send-email', { body: { emailLogId: emailLog.id } })
+            }
 
             setInvoice({ ...invoice, status: 'approved', approved_date: new Date().toISOString() })
             alert('Invoice approved! Redirecting to payment...')
@@ -96,14 +101,19 @@ export default function InvoiceView() {
 
             if (error) throw error
 
-            // Log email notification
-            await supabase.from('email_logs').insert({
+            // Log and send email notification to freelancer
+            const { data: emailLog, error: emailError } = await supabase.from('email_logs').insert({
                 invoice_id: invoice.id,
-                recipient_email: invoice.profiles?.business_name || 'freelancer',
+                recipient_email: invoice.profiles?.email || invoice.profiles?.business_name || 'freelancer',
                 email_type: 'invoice_rejected',
                 subject: `Invoice Rejected: #${invoice.id.slice(0, 8)}`,
                 status: 'pending'
-            })
+            }).select().single()
+
+            // Trigger Edge Function to send the email
+            if (!emailError && emailLog) {
+                await supabase.functions.invoke('send-email', { body: { emailLogId: emailLog.id } })
+            }
 
             setInvoice({ ...invoice, status: 'rejected', rejection_reason: rejectionReason })
             setShowRejectModal(false)
@@ -204,14 +214,19 @@ export default function InvoiceView() {
 
             if (paymentError) throw paymentError
 
-            // Log email notification
-            await supabase.from('email_logs').insert({
+            // Log and send email notification to freelancer
+            const { data: emailLog, error: emailError } = await supabase.from('email_logs').insert({
                 invoice_id: invoice.id,
-                recipient_email: invoice.profiles?.business_name || 'freelancer',
+                recipient_email: invoice.profiles?.email || invoice.profiles?.business_name || 'freelancer',
                 email_type: 'payment_received',
                 subject: `Payment Received: Invoice #${invoice.id.slice(0, 8)}`,
                 status: 'pending'
-            })
+            }).select().single()
+
+            // Trigger Edge Function to send the email
+            if (!emailError && emailLog) {
+                await supabase.functions.invoke('send-email', { body: { emailLogId: emailLog.id } })
+            }
 
             setInvoice({ ...invoice, status: 'paid' })
             alert('Payment Successful! Thank you for your payment.')
