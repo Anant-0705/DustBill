@@ -169,7 +169,7 @@ function generateEmailHtml(emailData) {
   const contract = contracts
   const client = invoice?.clients || contract?.clients
   
-  const baseUrl = Deno.env.get('PUBLIC_URL') || 'http://localhost:5173'
+  const baseUrl = Deno.env.get('PUBLIC_URL') || 'https://dust-bill.vercel.app'
   
   const invoiceUrl = invoice?.share_token 
     ? `${baseUrl}/invoice/${invoice.share_token}`
