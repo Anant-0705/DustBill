@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 export default function InvoiceView() {
     const { token } = useParams()
     const [invoice, setInvoice] = useState(null)
+    const [freelancerProfile, setFreelancerProfile] = useState(null)
     const [loading, setLoading] = useState(true)
     const [actionLoading, setActionLoading] = useState(false)
     const [showRejectModal, setShowRejectModal] = useState(false)
@@ -23,14 +24,23 @@ export default function InvoiceView() {
                     .from('invoices')
                     .select(`
                         *,
-                        clients (name, email, address, phone),
-                        profiles (first_name, last_name, business_name)
+                        clients (name, email, address, phone)
                     `)
                     .eq('share_token', token)
                     .single()
 
                 if (error) throw error
                 setInvoice(data)
+
+                // Fetch freelancer profile separately (no direct FK from invoices to profiles)
+                if (data?.user_id) {
+                    const { data: profileData } = await supabase
+                        .from('profiles')
+                        .select('first_name, last_name, business_name, email')
+                        .eq('id', data.user_id)
+                        .single()
+                    if (profileData) setFreelancerProfile(profileData)
+                }
             } catch (error) {
                 console.error('Error fetching invoice:', error)
             } finally {
@@ -56,19 +66,14 @@ export default function InvoiceView() {
 
             if (error) throw error
 
-            // Log and send email notification to freelancer
-            const { data: emailLog, error: emailError } = await supabase.from('email_logs').insert({
-                invoice_id: invoice.id,
-                recipient_email: invoice.profiles?.email || invoice.profiles?.business_name || 'freelancer',
-                email_type: 'invoice_approved',
-                subject: `Invoice Approved: #${invoice.id.slice(0, 8)}`,
-                status: 'pending'
-            }).select().single()
-
-            // Trigger Edge Function to send the email
-            if (!emailError && emailLog) {
-                await supabase.functions.invoke('send-email', { body: { emailLogId: emailLog.id } })
-            }
+            // Notify freelancer directly via edge function (public clients can't insert email_logs)
+            await supabase.functions.invoke('send-email', {
+                body: {
+                    to: freelancerProfile?.email,
+                    subject: `Invoice Approved: #${invoice.id.slice(0, 8)}`,
+                    html: `<p>Your invoice <strong>#${invoice.id.slice(0, 8)}</strong> has been approved by ${invoice.clients?.name || 'your client'}. Payment is being processed.</p>`
+                }
+            })
 
             setInvoice({ ...invoice, status: 'approved', approved_date: new Date().toISOString() })
             alert('Invoice approved! Redirecting to payment...')
@@ -101,19 +106,14 @@ export default function InvoiceView() {
 
             if (error) throw error
 
-            // Log and send email notification to freelancer
-            const { data: emailLog, error: emailError } = await supabase.from('email_logs').insert({
-                invoice_id: invoice.id,
-                recipient_email: invoice.profiles?.email || invoice.profiles?.business_name || 'freelancer',
-                email_type: 'invoice_rejected',
-                subject: `Invoice Rejected: #${invoice.id.slice(0, 8)}`,
-                status: 'pending'
-            }).select().single()
-
-            // Trigger Edge Function to send the email
-            if (!emailError && emailLog) {
-                await supabase.functions.invoke('send-email', { body: { emailLogId: emailLog.id } })
-            }
+            // Notify freelancer directly via edge function (public clients can't insert email_logs)
+            await supabase.functions.invoke('send-email', {
+                body: {
+                    to: freelancerProfile?.email,
+                    subject: `Invoice Rejected: #${invoice.id.slice(0, 8)}`,
+                    html: `<p>Your invoice <strong>#${invoice.id.slice(0, 8)}</strong> was rejected by ${invoice.clients?.name || 'your client'}.</p><p><strong>Reason:</strong> ${rejectionReason}</p>`
+                }
+            })
 
             setInvoice({ ...invoice, status: 'rejected', rejection_reason: rejectionReason })
             setShowRejectModal(false)
@@ -149,7 +149,7 @@ export default function InvoiceView() {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_1234567890',
                 amount: Math.round(invoice.amount * 100), // Amount in paise
                 currency: invoice.currency || 'USD',
-                name: invoice.profiles?.business_name || 'Dustbill',
+                name: freelancerProfile?.business_name || 'Dustbill',
                 description: `Invoice #${invoice.id.slice(0, 8)}`,
                 image: '/logo.png', // Optional: Add your logo
                 handler: async function (response) {
@@ -214,19 +214,14 @@ export default function InvoiceView() {
 
             if (paymentError) throw paymentError
 
-            // Log and send email notification to freelancer
-            const { data: emailLog, error: emailError } = await supabase.from('email_logs').insert({
-                invoice_id: invoice.id,
-                recipient_email: invoice.profiles?.email || invoice.profiles?.business_name || 'freelancer',
-                email_type: 'payment_received',
-                subject: `Payment Received: Invoice #${invoice.id.slice(0, 8)}`,
-                status: 'pending'
-            }).select().single()
-
-            // Trigger Edge Function to send the email
-            if (!emailError && emailLog) {
-                await supabase.functions.invoke('send-email', { body: { emailLogId: emailLog.id } })
-            }
+            // Notify freelancer directly via edge function (public clients can't insert email_logs)
+            await supabase.functions.invoke('send-email', {
+                body: {
+                    to: freelancerProfile?.email,
+                    subject: `Payment Received: Invoice #${invoice.id.slice(0, 8)}`,
+                    html: `<p>Payment has been successfully received for invoice <strong>#${invoice.id.slice(0, 8)}</strong> from ${invoice.clients?.name || 'your client'}. Amount: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.amount)}</p>`
+                }
+            })
 
             setInvoice({ ...invoice, status: 'paid' })
             alert('Payment Successful! Thank you for your payment.')
@@ -334,8 +329,8 @@ export default function InvoiceView() {
                 <Card className="p-8 bg-white shadow-lg print:shadow-none print:border-0" id="invoice-content">
                     <div className="flex justify-between items-start border-b pb-8">
                         <div>
-                            <h2 className="text-2xl font-bold text-gray-900">{invoice.profiles?.business_name || 'Dustbill User'}</h2>
-                            <p className="text-gray-500">{invoice.profiles?.email}</p>
+                            <h2 className="text-2xl font-bold text-gray-900">{freelancerProfile?.business_name || 'Dustbill User'}</h2>
+                            <p className="text-gray-500">{freelancerProfile?.email}</p>
                         </div>
                         <div className="text-right">
                             <h3 className="text-lg font-medium text-gray-900">Invoice</h3>
