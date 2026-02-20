@@ -8,6 +8,7 @@ export default function ContractView() {
     const { token } = useParams()
     const navigate = useNavigate()
     const [contract, setContract] = useState(null)
+    const [freelancerProfile, setFreelancerProfile] = useState(null)
     const [loading, setLoading] = useState(true)
     const [actionLoading, setActionLoading] = useState(false)
     const [showRejectModal, setShowRejectModal] = useState(false)
@@ -24,14 +25,23 @@ export default function ContractView() {
                 .from('contracts')
                 .select(`
                     *,
-                    clients (name, email, address, phone),
-                    profiles (first_name, last_name, business_name)
+                    clients (name, email, address, phone)
                 `)
                 .eq('share_token', token)
                 .single()
 
             if (error) throw error
             setContract(data)
+
+            // Fetch freelancer profile separately (no direct FK from contracts to profiles)
+            if (data?.user_id) {
+                const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('first_name, last_name, business_name, email')
+                    .eq('id', data.user_id)
+                    .single()
+                if (profileData) setFreelancerProfile(profileData)
+            }
         } catch (error) {
             console.error('Error fetching contract:', error)
         } finally {
@@ -54,13 +64,13 @@ export default function ContractView() {
 
             if (error) throw error
 
-            // Log email notification
-            await supabase.from('email_logs').insert({
-                contract_id: contract.id,
-                recipient_email: contract.profiles?.business_name || 'freelancer',
-                email_type: 'contract_accepted',
-                subject: `Contract Accepted: ${contract.title}`,
-                status: 'pending'
+            // Notify freelancer directly via edge function (public clients can't insert email_logs)
+            await supabase.functions.invoke('send-email', {
+                body: {
+                    to: freelancerProfile?.email,
+                    subject: `Contract Accepted: ${contract.title}`,
+                    html: `<p>Your contract <strong>${contract.title}</strong> has been accepted by ${contract.clients?.name || 'your client'}.</p>`
+                }
             })
 
             setContract({ ...contract, status: 'accepted', signed_date: new Date().toISOString() })
@@ -91,13 +101,13 @@ export default function ContractView() {
 
             if (error) throw error
 
-            // Log email notification
-            await supabase.from('email_logs').insert({
-                contract_id: contract.id,
-                recipient_email: contract.profiles?.business_name || 'freelancer',
-                email_type: 'contract_rejected',
-                subject: `Contract Rejected: ${contract.title}`,
-                status: 'pending'
+            // Notify freelancer directly via edge function (public clients can't insert email_logs)
+            await supabase.functions.invoke('send-email', {
+                body: {
+                    to: freelancerProfile?.email,
+                    subject: `Contract Rejected: ${contract.title}`,
+                    html: `<p>Your contract <strong>${contract.title}</strong> was rejected by ${contract.clients?.name || 'your client'}.</p><p><strong>Reason:</strong> ${rejectionReason}</p>`
+                }
             })
 
             setContract({ ...contract, status: 'rejected', rejection_reason: rejectionReason })
@@ -205,8 +215,8 @@ export default function ContractView() {
                         <div>
                             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Freelancer / Service Provider</h4>
                             <p className="font-semibold text-foreground">
-                                {contract.profiles?.business_name || 
-                                 `${contract.profiles?.first_name || ''} ${contract.profiles?.last_name || ''}`.trim() ||
+                                {freelancerProfile?.business_name || 
+                                 `${freelancerProfile?.first_name || ''} ${freelancerProfile?.last_name || ''}`.trim() ||
                                  'Freelancer'}
                             </p>
                         </div>
@@ -245,8 +255,8 @@ export default function ContractView() {
                                 <div className="h-20 border-b-2 border-dashed border-border mb-3" />
                                 <p className="text-xs text-muted-foreground font-medium">Freelancer Signature</p>
                                 <p className="text-sm text-foreground">
-                                    {contract.profiles?.business_name || 
-                                     `${contract.profiles?.first_name || ''} ${contract.profiles?.last_name || ''}`.trim()}
+                                    {freelancerProfile?.business_name || 
+                                     `${freelancerProfile?.first_name || ''} ${freelancerProfile?.last_name || ''}`.trim()}
                                 </p>
                             </div>
                             <div>
