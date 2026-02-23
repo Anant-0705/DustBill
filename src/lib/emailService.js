@@ -28,9 +28,16 @@ export const emailService = {
             })
             
             if (functionError) {
-                console.error('Edge Function error:', functionError)
+                let details = functionError.message || 'Unknown error'
+                try {
+                    if (functionError.context) {
+                        const body = await functionError.context.json()
+                        details = body.error || body.details || details
+                    }
+                } catch (_) {}
+                console.error('Edge Function error:', details)
                 await supabase.from('email_logs').update({ status: 'failed' }).eq('id', data.id)
-                throw functionError
+                throw new Error(details)
             }
             
             return { success: true, data }
@@ -61,9 +68,16 @@ export const emailService = {
             })
             
             if (functionError) {
-                console.error('Edge Function error:', functionError)
+                let details = functionError.message || 'Unknown error'
+                try {
+                    if (functionError.context) {
+                        const body = await functionError.context.json()
+                        details = body.error || body.details || details
+                    }
+                } catch (_) {}
+                console.error('Edge Function error:', details)
                 await supabase.from('email_logs').update({ status: 'failed' }).eq('id', data.id)
-                throw functionError
+                throw new Error(details)
             }
             
             return { success: true, data }

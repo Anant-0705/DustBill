@@ -13,6 +13,7 @@ import Clients from './pages/Clients'
 import Settings from './pages/Settings'
 import DashboardLayout from './components/DashboardLayout'
 import ProtectedRoute from './components/ProtectedRoute'
+import AuthCallback from './pages/AuthCallback'
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/invoice/:token" element={<InvoiceView />} />
       <Route path="/contract/:token" element={<ContractView />} />
 

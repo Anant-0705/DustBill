@@ -8,15 +8,32 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+}
+
 serve(async (req) => {
   // Allow CORS
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { 
-      headers: { 
-        'Access-Control-Allow-Origin': '*', 
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' 
-      } 
-    })
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  // Early check: ensure all required secrets are present
+  if (!RESEND_API_KEY) {
+    console.error('RESEND_API_KEY secret is not set in Supabase Edge Function secrets')
+    return new Response(
+      JSON.stringify({ success: false, error: 'RESEND_API_KEY is not configured. Set it in Supabase Dashboard → Edge Functions → Manage secrets.' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('SUPABASE_SERVICE_ROLE_KEY secret is not set')
+    return new Response(
+      JSON.stringify({ success: false, error: 'SUPABASE_SERVICE_ROLE_KEY is not configured.' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
 
   let emailLogId = null
@@ -73,8 +90,8 @@ serve(async (req) => {
     // Prepare email content
     const emailTo = to || emailData?.recipient_email
     const emailSubject = subject || emailData?.subject
-    // Use Resend's test email for free tier, or your verified domain
-    const emailFrom = from || 'Dustbill <onboarding@resend.dev>'
+    // Use verified custom domain
+    const emailFrom = from || 'Dustbill <no-reply@dustbill.com>'
     
     console.log('Sending email to:', emailTo)
     console.log('Subject:', emailSubject)
@@ -103,9 +120,13 @@ serve(async (req) => {
     })
 
     const result = await response.json()
+    console.log('Resend API response status:', response.status)
+    console.log('Resend API response:', JSON.stringify(result))
 
     if (!response.ok) {
-      throw new Error(result.message || 'Failed to send email')
+      const resendError = result.message || result.name || JSON.stringify(result)
+      console.error('Resend API error:', resendError)
+      throw new Error(`Resend API error (${response.status}): ${resendError}`)
     }
 
     // Update email log status
@@ -118,13 +139,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, data: result }),
-      { 
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': '*'
-        } 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.error('Email sending error:', error)
@@ -151,14 +166,7 @@ serve(async (req) => {
         error: error.message,
         details: error.toString()
       }),
-      { 
-        status: 500, 
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': '*'
-        } 
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
