@@ -1,10 +1,8 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { createPortal } from 'react-dom'
 import {
-    Plus, FileText, Search, MoreHorizontal,
-    Eye, Pencil, Trash2, Copy, Send, ExternalLink,
-    Clock, CheckCircle2, AlertCircle, FileEdit, Inbox, XCircle
+    Plus, FileText, Search,
+    Eye, Send, CheckCircle2, FileEdit, Inbox, XCircle
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
@@ -20,147 +18,19 @@ const TABS = [
 ]
 
 const STATUS_CONFIG = {
-    draft: { label: 'Draft', cls: 'bg-muted text-muted-foreground', dot: 'bg-gray-400' },
-    sent: { label: 'Sent', cls: 'bg-blue-500/10 text-blue-600', dot: 'bg-blue-500' },
-    accepted: { label: 'Accepted', cls: 'bg-green-500/10 text-green-600', dot: 'bg-green-500' },
-    rejected: { label: 'Rejected', cls: 'bg-red-500/10 text-red-600', dot: 'bg-red-500' },
+    draft:    { label: 'Draft',    cls: 'bg-muted text-muted-foreground',     dot: 'bg-gray-400' },
+    sent:     { label: 'Sent',     cls: 'bg-blue-500/10 text-blue-600',       dot: 'bg-blue-500' },
+    accepted: { label: 'Accepted', cls: 'bg-emerald-500/10 text-emerald-600', dot: 'bg-emerald-500' },
+    rejected: { label: 'Rejected', cls: 'bg-red-500/10 text-red-600',         dot: 'bg-red-500' },
 }
 
-/* ── Floating dropdown portal ── */
-function ActionMenu({ contract, anchorRef, onClose, onAction }) {
-    const menuRef = useRef(null)
-    const [pos, setPos] = useState({ top: 0, left: 0 })
 
-    useEffect(() => {
-        if (!anchorRef?.current) return
-        const rect = anchorRef.current.getBoundingClientRect()
-        setPos({
-            top: rect.bottom + 4,
-            left: rect.right - 192,
-        })
-    }, [anchorRef])
-
-    useEffect(() => {
-        const handler = (e) => {
-            if (menuRef.current && !menuRef.current.contains(e.target) &&
-                anchorRef.current && !anchorRef.current.contains(e.target)) {
-                onClose()
-            }
-        }
-        document.addEventListener('mousedown', handler)
-        return () => document.removeEventListener('mousedown', handler)
-    }, [onClose, anchorRef])
-
-    useEffect(() => {
-        const handler = () => onClose()
-        window.addEventListener('scroll', handler, true)
-        return () => window.removeEventListener('scroll', handler, true)
-    }, [onClose])
-
-    return createPortal(
-        <div
-            ref={menuRef}
-            className="fixed w-48 bg-card rounded-xl border border-border shadow-2xl z-[100] py-1.5"
-            style={{ top: pos.top, left: pos.left }}
-        >
-            {/* View */}
-            {contract.share_token && (
-                <button
-                    onClick={() => onAction('view')}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors text-left"
-                >
-                    <Eye className="h-3.5 w-3.5 text-muted-foreground" /> View Contract
-                </button>
-            )}
-
-            {/* Edit Draft */}
-            {contract.status === 'draft' && (
-                <button
-                    onClick={() => onAction('edit')}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors text-left"
-                >
-                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" /> Edit Draft
-                </button>
-            )}
-
-            {/* Send to Client */}
-            {(contract.status === 'draft' || contract.status === 'rejected') && (
-                <button
-                    onClick={() => onAction('send')}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors text-left"
-                >
-                    <Send className="h-3.5 w-3.5 text-muted-foreground" /> Send to Client
-                </button>
-            )}
-
-            {/* Copy Link */}
-            {contract.share_token && (
-                <button
-                    onClick={() => onAction('copy')}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors text-left"
-                >
-                    <Copy className="h-3.5 w-3.5 text-muted-foreground" /> Copy Link
-                </button>
-            )}
-
-            {/* Duplicate */}
-            <button
-                onClick={() => onAction('duplicate')}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors text-left"
-            >
-                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" /> Duplicate
-            </button>
-
-            <div className="my-1.5 border-t border-border" />
-
-            {/* Delete */}
-            <button
-                onClick={() => onAction('delete')}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-red-500 hover:bg-red-500/5 transition-colors text-left"
-            >
-                <Trash2 className="h-3.5 w-3.5" /> Delete Contract
-            </button>
-        </div>,
-        document.body
-    )
-}
-
-/* ── Row-level action button ── */
-function RowActions({ contract, isOpen, onToggle, onAction }) {
-    const btnRef = useRef(null)
-
-    return (
-        <>
-            <button
-                ref={btnRef}
-                onClick={onToggle}
-                className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors
-                    ${isOpen
-                        ? 'bg-accent text-foreground'
-                        : 'text-muted-foreground hover:bg-accent hover:text-foreground opacity-0 group-hover:opacity-100'
-                    }
-                `}
-            >
-                <MoreHorizontal className="h-4 w-4" />
-            </button>
-            {isOpen && (
-                <ActionMenu
-                    contract={contract}
-                    anchorRef={btnRef}
-                    onClose={() => onToggle()}
-                    onAction={onAction}
-                />
-            )}
-        </>
-    )
-}
 
 export default function Contracts() {
     const [contracts, setContracts] = useState([])
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('all')
     const [searchQuery, setSearchQuery] = useState('')
-    const [openMenu, setOpenMenu] = useState(null)
     const { user } = useAuthStore()
     const navigate = useNavigate()
 
@@ -260,30 +130,9 @@ export default function Contracts() {
         }
     }
 
-    const handleRowAction = useCallback((contract, action) => {
-        setOpenMenu(null)
-        switch (action) {
-            case 'view':
-                window.open(`/contract/${contract.share_token}`, '_blank')
-                break
-            case 'edit':
-                navigate('/contracts/new', { state: { editContract: contract } })
-                break
-            case 'send':
-                sendContract(contract.id)
-                break
-            case 'copy':
-                navigator.clipboard.writeText(`${window.location.origin}/contract/${contract.share_token}`)
-                alert('Contract link copied to clipboard!')
-                break
-            case 'duplicate':
-                duplicateContract(contract)
-                break
-            case 'delete':
-                deleteContract(contract.id)
-                break
-        }
-    }, [navigate])
+    const viewContract = useCallback((contract) => {
+        window.open(`${window.location.origin}/contract/${contract.share_token}`, '_blank')
+    }, [])
 
     const filtered = contracts.filter(c => {
         if (activeTab !== 'all' && c.status !== activeTab) return false
@@ -414,12 +263,15 @@ export default function Contracts() {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-2">
                                             <p className="text-sm font-semibold text-foreground truncate">{contract.title}</p>
-                                            <RowActions
-                                                contract={contract}
-                                                isOpen={openMenu === contract.id}
-                                                onToggle={() => setOpenMenu(openMenu === contract.id ? null : contract.id)}
-                                                onAction={(action) => handleRowAction(contract, action)}
-                                            />
+                                            {contract.share_token && (
+                                                <button
+                                                    onClick={() => viewContract(contract)}
+                                                    className="h-7 w-7 rounded-lg flex items-center justify-center bg-slate-700 dark:bg-slate-600 hover:bg-slate-600 dark:hover:bg-slate-500 transition-colors shrink-0"
+                                                    title="View contract"
+                                                >
+                                                    <Eye className="h-3.5 w-3.5 text-white" />
+                                                </button>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-2 mt-1">
                                             <p className="text-xs text-muted-foreground truncate">{contract.clients?.name || 'No client'}</p>
@@ -461,12 +313,15 @@ export default function Contracts() {
                                         {format(new Date(contract.created_at), 'MMM d, yyyy')}
                                     </div>
                                     <div className="col-span-1 flex justify-end">
-                                        <RowActions
-                                            contract={contract}
-                                            isOpen={openMenu === contract.id}
-                                            onToggle={() => setOpenMenu(openMenu === contract.id ? null : contract.id)}
-                                            onAction={(action) => handleRowAction(contract, action)}
-                                        />
+                                        {contract.share_token && (
+                                            <button
+                                                onClick={() => viewContract(contract)}
+                                                className="h-8 w-8 rounded-lg flex items-center justify-center bg-slate-700 dark:bg-slate-600 hover:bg-slate-600 dark:hover:bg-slate-500 transition-colors"
+                                                title="View contract"
+                                            >
+                                                <Eye className="h-4 w-4 text-white" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>

@@ -1,10 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { createPortal } from 'react-dom'
 import {
-    Plus, FileText, Search, MoreHorizontal,
-    Eye, Pencil, Trash2, Copy, Send, ExternalLink,
-    Clock, CheckCircle2, AlertCircle, FileEdit, Inbox
+    Plus, FileText, Search,
+    Eye, CheckCircle2, AlertCircle, FileEdit, Inbox, Send
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
@@ -14,7 +12,7 @@ import { emailService } from '../lib/emailService'
 const TABS = [
     { key: 'all', label: 'All Invoices', icon: Inbox },
     { key: 'draft', label: 'Drafts', icon: FileEdit },
-    { key: 'pending', label: 'Sent', icon: Send },
+    { key: 'pending', label: 'Pending', icon: Send },
     { key: 'approved', label: 'Approved', icon: CheckCircle2 },
     { key: 'paid', label: 'Paid', icon: CheckCircle2 },
     { key: 'rejected', label: 'Rejected', icon: AlertCircle },
@@ -22,151 +20,21 @@ const TABS = [
 ]
 
 const STATUS_CONFIG = {
-    draft: { label: 'Draft', cls: 'bg-muted text-muted-foreground', dot: 'bg-gray-400' },
-    pending: { label: 'Sent', cls: 'bg-blue-500/10 text-blue-600', dot: 'bg-blue-500' },
-    approved: { label: 'Approved', cls: 'bg-green-500/10 text-green-600', dot: 'bg-green-500' },
-    paid: { label: 'Paid', cls: 'bg-green-500/10 text-green-600', dot: 'bg-green-500' },
-    rejected: { label: 'Rejected', cls: 'bg-red-500/10 text-red-600', dot: 'bg-red-500' },
-    overdue: { label: 'Overdue', cls: 'bg-red-500/10 text-red-600', dot: 'bg-red-500' },
+    draft:    { label: 'Draft',    cls: 'bg-muted text-muted-foreground',       dot: 'bg-gray-400' },
+    pending:  { label: 'Pending',  cls: 'bg-blue-500/10 text-blue-600',         dot: 'bg-blue-500' },
+    approved: { label: 'Approved', cls: 'bg-emerald-500/10 text-emerald-600',   dot: 'bg-emerald-500' },
+    paid:     { label: 'Paid',     cls: 'bg-violet-500/10 text-violet-600',     dot: 'bg-violet-500' },
+    rejected: { label: 'Rejected', cls: 'bg-red-500/10 text-red-600',           dot: 'bg-red-500' },
+    overdue:  { label: 'Overdue',  cls: 'bg-orange-500/10 text-orange-600',     dot: 'bg-orange-500' },
 }
 
 /* ── Floating dropdown portal ── */
-function ActionMenu({ invoice, anchorRef, onClose, onAction }) {
-    const menuRef = useRef(null)
-    const [pos, setPos] = useState({ top: 0, left: 0 })
-
-    useEffect(() => {
-        if (!anchorRef?.current) return
-        const rect = anchorRef.current.getBoundingClientRect()
-        setPos({
-            top: rect.bottom + 4,
-            left: rect.right - 192,       // 192 = menu width (w-48)
-        })
-    }, [anchorRef])
-
-    // Close on click outside
-    useEffect(() => {
-        const handler = (e) => {
-            if (menuRef.current && !menuRef.current.contains(e.target) &&
-                anchorRef.current && !anchorRef.current.contains(e.target)) {
-                onClose()
-            }
-        }
-        document.addEventListener('mousedown', handler)
-        return () => document.removeEventListener('mousedown', handler)
-    }, [onClose, anchorRef])
-
-    // Close on scroll
-    useEffect(() => {
-        const handler = () => onClose()
-        window.addEventListener('scroll', handler, true)
-        return () => window.removeEventListener('scroll', handler, true)
-    }, [onClose])
-
-    return createPortal(
-        <div
-            ref={menuRef}
-            className="fixed w-48 bg-card rounded-xl border border-border shadow-2xl z-[100] py-1.5"
-            style={{ top: pos.top, left: pos.left }}
-        >
-            {/* View */}
-            {invoice.share_token && (
-                <button
-                    onClick={() => onAction('view')}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors text-left"
-                >
-                    <Eye className="h-3.5 w-3.5 text-muted-foreground" /> View Invoice
-                </button>
-            )}
-
-            {/* Edit Draft */}
-            {invoice.status === 'draft' && (
-                <button
-                    onClick={() => onAction('edit')}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors text-left"
-                >
-                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" /> Edit Draft
-                </button>
-            )}
-
-            {/* Mark as Sent */}
-            {invoice.status === 'draft' && (
-                <button
-                    onClick={() => onAction('send')}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors text-left"
-                >
-                    <Send className="h-3.5 w-3.5 text-muted-foreground" /> Mark as Sent
-                </button>
-            )}
-
-            {/* Copy Link */}
-            {invoice.share_token && (
-                <button
-                    onClick={() => onAction('copy')}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors text-left"
-                >
-                    <Copy className="h-3.5 w-3.5 text-muted-foreground" /> Copy Link
-                </button>
-            )}
-
-            {/* Duplicate */}
-            <button
-                onClick={() => onAction('duplicate')}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors text-left"
-            >
-                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" /> Duplicate
-            </button>
-
-            <div className="my-1.5 border-t border-border" />
-
-            {/* Delete */}
-            <button
-                onClick={() => onAction('delete')}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-red-500 hover:bg-red-500/5 transition-colors text-left"
-            >
-                <Trash2 className="h-3.5 w-3.5" /> Delete Invoice
-            </button>
-        </div>,
-        document.body
-    )
-}
-
-/* ── Row-level action button ── */
-function RowActions({ invoice, isOpen, onToggle, onAction }) {
-    const btnRef = useRef(null)
-
-    return (
-        <>
-            <button
-                ref={btnRef}
-                onClick={onToggle}
-                className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors
-                    ${isOpen
-                        ? 'bg-accent text-foreground'
-                        : 'text-muted-foreground hover:bg-accent hover:text-foreground opacity-0 group-hover:opacity-100'
-                    }
-                `}
-            >
-                <MoreHorizontal className="h-4 w-4" />
-            </button>
-            {isOpen && (
-                <ActionMenu
-                    invoice={invoice}
-                    anchorRef={btnRef}
-                    onClose={() => onToggle()}
-                    onAction={onAction}
-                />
-            )}
-        </>
-    )
-}
 
 export default function Invoices() {
     const [invoices, setInvoices] = useState([])
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('all')
     const [searchQuery, setSearchQuery] = useState('')
-    const [openMenu, setOpenMenu] = useState(null)
     const { user } = useAuthStore()
     const navigate = useNavigate()
 
@@ -192,14 +60,12 @@ export default function Invoices() {
     }
 
     async function deleteInvoice(id) {
-        if (!confirm('Are you sure you want to delete this invoice?')) return
         try {
             const { error } = await supabase.from('invoices').delete().eq('id', id)
             if (error) throw error
             setInvoices(prev => prev.filter(inv => inv.id !== id))
         } catch (error) {
             console.error('Delete error:', error)
-            alert('Failed to delete invoice.')
         }
     }
 
@@ -219,7 +85,6 @@ export default function Invoices() {
             setInvoices(prev => [data, ...prev])
         } catch (error) {
             console.error('Duplicate error:', error)
-            alert('Failed to duplicate invoice.')
         }
     }
 
@@ -244,36 +109,21 @@ export default function Invoices() {
             }
             
             setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: 'pending', client_email_sent: true } : inv))
-            alert('Invoice sent to client!')
         } catch (error) {
             console.error('Update error:', error)
-            alert('Failed to send invoice. Please try again.')
         }
     }
 
     const handleRowAction = useCallback((invoice, action) => {
-        setOpenMenu(null)
         switch (action) {
             case 'view':
-                window.open(`/invoice/${invoice.share_token}`, '_blank')
-                break
-            case 'edit':
-                navigate('/invoices/new', { state: { editInvoice: invoice } })
+                window.open(`${window.location.origin}/invoice/${invoice.share_token}`, '_blank')
                 break
             case 'send':
                 markAsSent(invoice)
                 break
-            case 'copy':
-                navigator.clipboard.writeText(`${window.location.origin}/invoice/${invoice.share_token}`)
-                break
-            case 'duplicate':
-                duplicateInvoice(invoice)
-                break
-            case 'delete':
-                deleteInvoice(invoice.id)
-                break
         }
-    }, [navigate])
+    }, [])
 
     const fmt = (amount, currency = 'USD') =>
         new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0)
@@ -445,12 +295,15 @@ export default function Invoices() {
                                                     <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />
                                                     {statusCfg.label}
                                                 </span>
-                                                <RowActions
-                                                    invoice={invoice}
-                                                    isOpen={openMenu === invoice.id}
-                                                    onToggle={() => setOpenMenu(openMenu === invoice.id ? null : invoice.id)}
-                                                    onAction={(action) => handleRowAction(invoice, action)}
-                                                />
+                                                {invoice.share_token && (
+                                                    <button
+                                                        onClick={() => window.open(`${window.location.origin}/invoice/${invoice.share_token}`, '_blank')}
+                                                        className="h-7 w-7 rounded-lg flex items-center justify-center bg-slate-700 dark:bg-slate-600 hover:bg-slate-600 dark:hover:bg-slate-500 transition-colors"
+                                                        title="View invoice"
+                                                    >
+                                                        <Eye className="h-3.5 w-3.5 text-white" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -488,19 +341,13 @@ export default function Invoices() {
                                     <div className="col-span-2 flex items-center justify-end gap-1.5">
                                         {invoice.share_token && (
                                             <button
-                                                onClick={() => window.open(`/invoice/${invoice.share_token}`, '_blank')}
-                                                className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                                                onClick={() => window.open(`${window.location.origin}/invoice/${invoice.share_token}`, '_blank')}
+                                                className="h-8 w-8 rounded-lg flex items-center justify-center bg-slate-700 dark:bg-slate-600 hover:bg-slate-600 dark:hover:bg-slate-500 transition-colors"
                                                 title="View invoice"
                                             >
-                                                <Eye className="h-3.5 w-3.5" />
+                                                <Eye className="h-4 w-4 text-white" />
                                             </button>
                                         )}
-                                        <RowActions
-                                            invoice={invoice}
-                                            isOpen={openMenu === invoice.id}
-                                            onToggle={() => setOpenMenu(openMenu === invoice.id ? null : invoice.id)}
-                                            onAction={(action) => handleRowAction(invoice, action)}
-                                        />
                                     </div>
                                 </div>
                             </div>
