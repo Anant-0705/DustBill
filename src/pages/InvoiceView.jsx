@@ -3,8 +3,6 @@ import { useParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Download, CreditCard, XCircle, CheckCircle2, AlertCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { Button } from '../components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 
 export default function InvoiceView() {
     const { token } = useParams()
@@ -264,110 +262,152 @@ export default function InvoiceView() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-3xl mx-auto space-y-8">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 no-print">
-                    <div>
-                        <h1 className="text-2xl font-bold">Invoice #{invoice.id.slice(0, 8)}</h1>
-                        {invoice.status === 'pending' && (
-                            <p className="text-sm text-muted-foreground mt-1">Please review and approve this invoice to proceed with payment</p>
-                        )}
-                    </div>
-                    <div className="flex flex-wrap gap-2 items-center">
-                        <Button variant="outline" onClick={handlePrint} className="w-full sm:w-auto">
-                            <Download className="mr-2 h-4 w-4" /> Download PDF
-                        </Button>
-                        
-                        {/* Show status badges */}
-                        {invoice.status === 'paid' && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">
-                                <CheckCircle2 className="h-3.5 w-3.5" /> Paid
-                            </span>
-                        )}
-                        {invoice.status === 'rejected' && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-600/20">
-                                <XCircle className="h-3.5 w-3.5" /> Rejected
-                            </span>
-                        )}
-                        {invoice.status === 'approved' && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20">
-                                <CheckCircle2 className="h-3.5 w-3.5" /> Approved
-                            </span>
-                        )}
-                        
-                        {/* Action buttons for pending invoices */}
-                        {invoice.status === 'pending' && (
-                            <>
-                                <Button 
-                                    variant="destructive"
-                                    onClick={() => setShowRejectModal(true)}
-                                    disabled={actionLoading}
-                                    className="flex-1 sm:flex-none"
-                                >
-                                    <XCircle className="mr-2 h-4 w-4" /> Reject
-                                </Button>
-                                <Button 
-                                    onClick={handleApprove}
-                                    disabled={actionLoading}
-                                    className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-none"
-                                >
-                                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                                    {actionLoading ? 'Processing...' : 'Approve & Pay'}
-                                </Button>
-                            </>
-                        )}
-                        
-                        {/* Pay button for approved invoices */}
-                        {invoice.status === 'approved' && (
-                            <Button onClick={handlePayment} className="w-full sm:w-auto">
-                                <CreditCard className="mr-2 h-4 w-4" /> Pay Now
-                            </Button>
-                        )}
-                    </div>
+        <div className="min-h-screen bg-slate-100 py-10 px-4 sm:px-6 lg:px-8 print:bg-white print:p-0">
+            {/* Action Bar */}
+            <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 no-print">
+                <div>
+                    <h1 className="text-xl font-bold text-slate-800">Invoice #{invoice.id.slice(0, 8)}</h1>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                        {invoice.status === 'pending' ? 'Review the invoice below and approve or reject it.' : `Status: ${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}`}
+                    </p>
                 </div>
+                <div className="flex flex-wrap gap-2 items-center">
+                    <button
+                        onClick={handlePrint}
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
+                    >
+                        <Download className="h-4 w-4" /> Download PDF
+                    </button>
 
-                <Card className="p-8 bg-white shadow-lg print:shadow-none print:border-0" id="invoice-content">
-                    <div className="flex justify-between items-start border-b pb-8">
+                    {invoice.status === 'paid' && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Paid
+                        </span>
+                    )}
+                    {invoice.status === 'rejected' && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-600/20">
+                            <XCircle className="h-3.5 w-3.5" /> Rejected
+                        </span>
+                    )}
+                    {invoice.status === 'approved' && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Approved
+                        </span>
+                    )}
+
+                    {invoice.status === 'pending' && (
+                        <>
+                            <button
+                                onClick={() => setShowRejectModal(true)}
+                                disabled={actionLoading}
+                                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 transition-colors disabled:opacity-60"
+                            >
+                                <XCircle className="h-4 w-4" /> Reject
+                            </button>
+                            <button
+                                onClick={handleApprove}
+                                disabled={actionLoading}
+                                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                            >
+                                <CheckCircle2 className="h-4 w-4" />
+                                {actionLoading ? 'Processing...' : 'Approve & Pay'}
+                            </button>
+                        </>
+                    )}
+                    {invoice.status === 'approved' && (
+                        <button
+                            onClick={handlePayment}
+                            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition-colors"
+                        >
+                            <CreditCard className="h-4 w-4" /> Pay Now
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Invoice Card */}
+            <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden print:shadow-none print:rounded-none" id="invoice-content">
+                {/* Purple accent header strip */}
+                <div className="h-2 bg-gradient-to-r from-violet-500 to-purple-600" />
+
+                <div className="p-8 sm:p-10">
+                    {/* Invoice Header */}
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-6 pb-8 border-b border-slate-100">
                         <div>
-                            <h2 className="text-2xl font-bold text-gray-900">{freelancerProfile?.business_name || 'Dustbill User'}</h2>
-                            <p className="text-gray-500">{freelancerProfile?.email}</p>
+                            <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">
+                                {freelancerProfile?.business_name || `${freelancerProfile?.first_name ?? ''} ${freelancerProfile?.last_name ?? ''}`.trim() || 'Dustbill User'}
+                            </h2>
+                            {freelancerProfile?.email && (
+                                <p className="text-sm text-slate-500 mt-1">{freelancerProfile.email}</p>
+                            )}
                         </div>
-                        <div className="text-right">
-                            <h3 className="text-lg font-medium text-gray-900">Invoice</h3>
-                            <p className="text-gray-500">#{invoice.id.slice(0, 8)}</p>
-                            <p className="text-gray-500">Date: {format(new Date(invoice.created_at), 'MMM d, yyyy')}</p>
-                            {invoice.due_date && <p className="text-gray-500">Due: {format(new Date(invoice.due_date), 'MMM d, yyyy')}</p>}
+                        <div className="sm:text-right">
+                            <div className="inline-flex items-center gap-2 rounded-xl bg-violet-50 px-4 py-2 mb-3">
+                                <span className="text-xs font-semibold text-violet-500 uppercase tracking-wider">Invoice</span>
+                                <span className="text-sm font-bold text-violet-700">#{invoice.id.slice(0, 8)}</span>
+                            </div>
+                            <div className="space-y-1 text-sm text-slate-500">
+                                <div className="flex sm:justify-end gap-2">
+                                    <span className="font-medium text-slate-700">Issued:</span>
+                                    <span>{format(new Date(invoice.created_at), 'MMM d, yyyy')}</span>
+                                </div>
+                                {invoice.due_date && (
+                                    <div className="flex sm:justify-end gap-2">
+                                        <span className="font-medium text-slate-700">Due:</span>
+                                        <span>{format(new Date(invoice.due_date), 'MMM d, yyyy')}</span>
+                                    </div>
+                                )}
+                                <div className="flex sm:justify-end gap-2 pt-1">
+                                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize
+                                        ${invoice.status === 'paid' ? 'bg-emerald-50 text-emerald-700' :
+                                          invoice.status === 'rejected' ? 'bg-red-50 text-red-700' :
+                                          invoice.status === 'approved' ? 'bg-blue-50 text-blue-700' :
+                                          'bg-amber-50 text-amber-700'}`}>
+                                        {invoice.status}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-8 py-8 border-b">
+                    {/* Bill From / Bill To */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 py-8 border-b border-slate-100">
                         <div>
-                            <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Bill To</h4>
-                            <p className="mt-2 font-medium text-gray-900">{invoice.clients?.name}</p>
-                            <p className="text-gray-500">{invoice.clients?.email}</p>
-                            {invoice.clients?.address && <p className="text-gray-500">{invoice.clients.address}</p>}
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">From</p>
+                            <p className="font-semibold text-slate-800">
+                                {freelancerProfile?.business_name || `${freelancerProfile?.first_name ?? ''} ${freelancerProfile?.last_name ?? ''}`.trim() || 'Dustbill User'}
+                            </p>
+                            {freelancerProfile?.email && <p className="text-sm text-slate-500">{freelancerProfile.email}</p>}
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Bill To</p>
+                            <p className="font-semibold text-slate-800">{invoice.clients?.name}</p>
+                            {invoice.clients?.email && <p className="text-sm text-slate-500">{invoice.clients.email}</p>}
+                            {invoice.clients?.address && <p className="text-sm text-slate-500">{invoice.clients.address}</p>}
+                            {invoice.clients?.phone && <p className="text-sm text-slate-500">{invoice.clients.phone}</p>}
                         </div>
                     </div>
 
+                    {/* Line Items */}
                     <div className="py-8">
-                        <table className="w-full">
+                        <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b text-left text-sm font-medium text-gray-500">
-                                    <th className="pb-4">Description</th>
-                                    <th className="pb-4 text-right">Qty</th>
-                                    <th className="pb-4 text-right">Price</th>
-                                    <th className="pb-4 text-right">Amount</th>
+                                <tr className="bg-slate-50 rounded-xl">
+                                    <th className="text-left text-xs font-bold uppercase tracking-wider text-slate-400 px-4 py-3 rounded-l-xl">Description</th>
+                                    <th className="text-center text-xs font-bold uppercase tracking-wider text-slate-400 px-4 py-3">Qty</th>
+                                    <th className="text-right text-xs font-bold uppercase tracking-wider text-slate-400 px-4 py-3">Unit Price</th>
+                                    <th className="text-right text-xs font-bold uppercase tracking-wider text-slate-400 px-4 py-3 rounded-r-xl">Amount</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y">
+                            <tbody>
                                 {invoice.items?.map((item, index) => (
-                                    <tr key={index}>
-                                        <td className="py-4">{item.description}</td>
-                                        <td className="py-4 text-right">{item.quantity}</td>
-                                        <td className="py-4 text-right">
+                                    <tr key={index} className="border-b border-slate-50">
+                                        <td className="py-4 px-4 text-slate-700 font-medium">{item.description}</td>
+                                        <td className="py-4 px-4 text-center text-slate-600">{item.quantity}</td>
+                                        <td className="py-4 px-4 text-right text-slate-600">
                                             {new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(item.rate)}
                                         </td>
-                                        <td className="py-4 text-right font-medium">
+                                        <td className="py-4 px-4 text-right font-semibold text-slate-800">
                                             {new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(item.quantity * item.rate)}
                                         </td>
                                     </tr>
@@ -376,68 +416,79 @@ export default function InvoiceView() {
                         </table>
                     </div>
 
-                    <div className="flex justify-end pt-8 border-t">
-                        <div className="w-64 space-y-4">
-                            <div className="flex justify-between border-t pt-4">
-                                <span className="font-bold text-lg">Total</span>
-                                <span className="font-bold text-lg">
+                    {/* Totals */}
+                    <div className="flex justify-end pt-4">
+                        <div className="w-72 space-y-2">
+                            <div className="flex justify-between text-sm text-slate-500">
+                                <span>Subtotal</span>
+                                <span>{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.amount)}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-t-2 border-slate-100 pt-3 mt-3">
+                                <span className="text-base font-bold text-slate-800">Total Due</span>
+                                <span className="text-xl font-extrabold text-violet-600">
                                     {new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.amount)}
                                 </span>
                             </div>
                         </div>
                     </div>
-                </Card>
 
-                {/* Rejection Reason Display */}
-                {invoice.status === 'rejected' && invoice.rejection_reason && (
-                    <Card className="border-red-200 bg-red-50">
-                        <CardContent className="pt-6">
-                            <div className="flex items-start gap-3">
-                                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-                                <div>
-                                    <h4 className="text-sm font-semibold text-red-900 mb-1">Rejection Reason</h4>
-                                    <p className="text-sm text-red-800">{invoice.rejection_reason}</p>
-                                    {invoice.rejection_date && (
-                                        <p className="text-xs text-red-600 mt-2">
-                                            Rejected on {format(new Date(invoice.rejection_date), 'MMM d, yyyy')}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
+                    {/* Footer note */}
+                    <div className="mt-10 pt-6 border-t border-slate-100 text-center">
+                        <p className="text-xs text-slate-400">Thank you for your business · Powered by <span className="font-semibold text-violet-400">Dustbill</span></p>
+                    </div>
+                </div>
             </div>
+
+            {/* Rejection Banner */}
+            {invoice.status === 'rejected' && invoice.rejection_reason && (
+                <div className="max-w-4xl mx-auto mt-5 no-print">
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-5 flex items-start gap-4">
+                        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-red-100 flex items-center justify-center">
+                            <AlertCircle className="h-5 w-5 text-red-600" />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-bold text-red-900 mb-1">Rejection Reason</h4>
+                            <p className="text-sm text-red-800">{invoice.rejection_reason}</p>
+                            {invoice.rejection_date && (
+                                <p className="text-xs text-red-500 mt-2">
+                                    Rejected on {format(new Date(invoice.rejection_date), 'MMM d, yyyy')}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        
 
             {/* Rejection Modal */}
             {showRejectModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl max-w-md w-full p-6">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Reject Invoice</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                            Please provide a reason for rejecting this invoice. This will help the freelancer understand your concerns.
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6">
+                        <h3 className="text-lg font-bold text-slate-900 mb-1">Reject Invoice</h3>
+                        <p className="text-sm text-slate-500 mb-4">
+                            Please provide a reason for rejection. This will be shared with the sender.
                         </p>
                         <textarea
-                            className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none"
+                            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 resize-none"
                             rows={4}
                             placeholder="Explain why you're rejecting this invoice..."
                             value={rejectionReason}
                             onChange={(e) => setRejectionReason(e.target.value)}
                         />
-                        <div className="flex justify-end gap-3 mt-6">
-                            <Button
-                                variant="outline"
+                        <div className="flex justify-end gap-3 mt-5">
+                            <button
                                 onClick={() => setShowRejectModal(false)}
+                                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
                             >
                                 Cancel
-                            </Button>
-                            <Button
-                                variant="destructive"
+                            </button>
+                            <button
                                 onClick={handleReject}
                                 disabled={actionLoading || !rejectionReason.trim()}
+                                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50"
                             >
                                 {actionLoading ? 'Rejecting...' : 'Reject Invoice'}
-                            </Button>
+                            </button>
                         </div>
                     </div>
                 </div>

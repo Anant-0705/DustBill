@@ -6,13 +6,28 @@ export default function AuthCallback() {
     const navigate = useNavigate()
 
     useEffect(() => {
-        // Exchange the code in the URL for a session (PKCE flow)
-        supabase.auth.exchangeCodeForSession(window.location.href).then(({ error }) => {
+        // With flowType: 'pkce', the Supabase client automatically exchanges
+        // the ?code= param in the URL when getSession() is called.
+        // Do NOT call exchangeCodeForSession manually — it conflicts.
+        supabase.auth.getSession().then(({ data: { session }, error }) => {
             if (error) {
                 console.error('Auth callback error:', error.message)
-                navigate('/login?error=auth_failed')
-            } else {
+                navigate('/login?error=auth_failed', { replace: true })
+            } else if (session) {
                 navigate('/dashboard', { replace: true })
+            } else {
+                // Fallback: listen for the SIGNED_IN event in case exchange is still in progress
+                const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+                    if (event === 'SIGNED_IN' && session) {
+                        subscription.unsubscribe()
+                        navigate('/dashboard', { replace: true })
+                    }
+                })
+                // Safety timeout — redirect to login if nothing happens in 5s
+                setTimeout(() => {
+                    subscription.unsubscribe()
+                    navigate('/login?error=auth_timeout', { replace: true })
+                }, 5000)
             }
         })
     }, [navigate])
