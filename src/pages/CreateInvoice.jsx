@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Trash2, Plus, Save, ArrowLeft, Eye, EyeOff, Palette, X, Upload, Send } from 'lucide-react'
+import { Trash2, Plus, Save, ArrowLeft, Eye, EyeOff, Palette, X, Upload, Send, ChevronDown, Search, UserCheck } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/authStore'
 import { emailService } from '../lib/emailService'
@@ -27,6 +27,46 @@ export default function CreateInvoice() {
     const [showPreview, setShowPreview] = useState(true)
     const [showColorPicker, setShowColorPicker] = useState(false)
     const [brandColor, setBrandColor] = useState('#A582F7')
+
+    // Existing clients
+    const [existingClients, setExistingClients] = useState([])
+    const [clientSearch, setClientSearch] = useState('')
+    const [showClientDropdown, setShowClientDropdown] = useState(false)
+    const clientDropdownRef = useRef(null)
+
+    useEffect(() => {
+        async function fetchClients() {
+            if (!user) return
+            const { data } = await supabase
+                .from('clients')
+                .select('id, name, email, address, phone')
+                .eq('user_id', user.id)
+                .order('name')
+            if (data) setExistingClients(data)
+        }
+        fetchClients()
+    }, [user])
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handler = (e) => {
+            if (clientDropdownRef.current && !clientDropdownRef.current.contains(e.target))
+                setShowClientDropdown(false)
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [])
+
+    const filteredClients = existingClients.filter(c =>
+        c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+        (c.email || '').toLowerCase().includes(clientSearch.toLowerCase())
+    )
+
+    const selectExistingClient = (c) => {
+        setClient({ name: c.name, email: c.email || '', address: c.address || '', phone: c.phone || '' })
+        setClientSearch(c.name)
+        setShowClientDropdown(false)
+    }
 
     // Scroll-hide header
     const [headerVisible, setHeaderVisible] = useState(true)
@@ -422,6 +462,51 @@ export default function CreateInvoice() {
                         {/* Client */}
                         <div className={cardCls}>
                             <div className={sectionTitleCls}><span>Client Details</span></div>
+
+                            {/* ── Existing client picker ── */}
+                            {existingClients.length > 0 && (
+                                <div className="mb-4" ref={clientDropdownRef}>
+                                    <label className={labelCls}>Pick an existing client</label>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                                        <input
+                                            className={inputCls + ' pl-8 pr-8'}
+                                            placeholder="Search clients by name or email…"
+                                            value={clientSearch}
+                                            onFocus={() => setShowClientDropdown(true)}
+                                            onChange={(e) => { setClientSearch(e.target.value); setShowClientDropdown(true) }}
+                                        />
+                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                                        {showClientDropdown && filteredClients.length > 0 && (
+                                            <div className="absolute z-50 mt-1 w-full bg-card border border-border rounded-xl shadow-xl overflow-hidden max-h-52 overflow-y-auto">
+                                                {filteredClients.map(c => (
+                                                    <button
+                                                        key={c.id}
+                                                        type="button"
+                                                        onClick={() => selectExistingClient(c)}
+                                                        className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-muted/60 transition-colors text-left"
+                                                    >
+                                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                                            <UserCheck className="h-3.5 w-3.5 text-primary" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
+                                                            {c.email && <p className="text-xs text-muted-foreground truncate">{c.email}</p>}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {showClientDropdown && clientSearch && filteredClients.length === 0 && (
+                                            <div className="absolute z-50 mt-1 w-full bg-card border border-border rounded-xl shadow-xl px-4 py-3 text-xs text-muted-foreground">
+                                                No clients match "{clientSearch}"
+                                            </div>
+                                        )}
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground mt-1.5">Or fill in the fields below to create a new client</p>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className={labelCls}>Client Name *</label>
