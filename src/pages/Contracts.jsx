@@ -49,21 +49,19 @@ export default function Contracts() {
             if (error) throw error
             setContracts(data || [])
         } catch (error) {
-            console.error('Error fetching contracts:', error)
+            // fetch failed — list stays empty
         } finally {
             setLoading(false)
         }
     }
 
     async function deleteContract(id) {
-        if (!confirm('Are you sure you want to delete this contract?')) return
         try {
             const { error } = await supabase.from('contracts').delete().eq('id', id)
             if (error) throw error
             setContracts(prev => prev.filter(c => c.id !== id))
         } catch (error) {
-            console.error('Delete error:', error)
-            alert('Failed to delete contract.')
+            // delete failed silently
         }
     }
 
@@ -82,51 +80,25 @@ export default function Contracts() {
             if (error) throw error
             setContracts(prev => [data, ...prev])
         } catch (error) {
-            console.error('Duplicate error:', error)
-            alert('Failed to duplicate contract.')
+            // duplicate failed silently
         }
     }
 
     async function sendContract(id) {
-        if (!confirm('Send this contract to the client? They will receive an email with a link to review and sign.')) return
         try {
-            // Get the full contract details first
             const contractToSend = contracts.find(c => c.id === id)
             if (!contractToSend) throw new Error('Contract not found')
-            
-            console.log('📝 Contract to send:', contractToSend)
-            console.log('📧 Client email:', contractToSend.clients?.email)
 
-            // Update contract status
-            const { error } = await supabase.from('contracts').update({ 
+            const { error } = await supabase.from('contracts').update({
                 status: 'sent',
                 updated_at: new Date().toISOString()
             }).eq('id', id)
             if (error) throw error
-            
-            // Send email notification
-            console.log('📤 Calling sendContractEmail...')
-            const emailResult = await emailService.sendContractEmail(contractToSend, 'contract_sent')
-            console.log('📬 Email result:', emailResult)
-            
-            if (emailResult.success) {
-                console.log('✅ Email notification logged:', emailResult.data)
-                console.log('📧 Check your Supabase email_logs table to verify')
-            } else {
-                console.error('⚠️ Email notification failed:', emailResult.error)
-            }
-            
+
+            await emailService.sendContractEmail(contractToSend, 'contract_sent')
             setContracts(prev => prev.map(c => c.id === id ? { ...c, status: 'sent' } : c))
-            
-            // Show helpful message
-            const message = emailResult.success 
-                ? '✅ Contract sent!\n\n📧 Email notification sent to ' + (contractToSend.clients?.email || 'client') + '.\n💡 Check email_logs table to verify.'
-                : '⚠️ Contract status updated, but email failed:\n' + (emailResult.error?.message || JSON.stringify(emailResult.error))
-            
-            alert(message)
         } catch (error) {
-            console.error('Send error:', error)
-            alert('Failed to send contract: ' + error.message)
+            // send failed silently
         }
     }
 
@@ -258,7 +230,7 @@ export default function Contracts() {
                                 {/* Mobile card */}
                                 <div className="sm:hidden flex items-center gap-3 px-4 py-3.5">
                                     <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                                        <FileText className="h-4.5 w-4.5 text-primary" />
+                                        <FileText className="h-[18px] w-[18px] text-primary" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-2">

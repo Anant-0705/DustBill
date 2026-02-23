@@ -14,6 +14,15 @@ export default function ContractView() {
     const [showRejectModal, setShowRejectModal] = useState(false)
     const [rejectionReason, setRejectionReason] = useState('')
     const [isOwner, setIsOwner] = useState(false)
+    const [notification, setNotification] = useState(null)
+
+    const showNotification = (msg, type = 'success') => {
+        setNotification({ msg, type })
+        setTimeout(() => setNotification(null), 4000)
+    }
+
+    // Helper to escape user-provided text before interpolating into email HTML
+    const escapeHtml = (str) => String(str).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 
     useEffect(() => {
         fetchContract()
@@ -48,14 +57,12 @@ export default function ContractView() {
                 if (profileData) setFreelancerProfile(profileData)
             }
         } catch (error) {
-            console.error('Error fetching contract:', error)
         } finally {
             setLoading(false)
         }
     }
 
     const handleAccept = async () => {
-        if (!confirm('Do you accept the terms of this contract?')) return
         setActionLoading(true)
         try {
             const { error } = await supabase
@@ -69,30 +76,27 @@ export default function ContractView() {
 
             if (error) throw error
 
-            // Notify freelancer directly via edge function (public clients can't insert email_logs)
-            await supabase.functions.invoke('send-email', {
-                body: {
-                    to: freelancerProfile?.email,
-                    subject: `Contract Accepted: ${contract.title}`,
-                    html: `<p>Your contract <strong>${contract.title}</strong> has been accepted by ${contract.clients?.name || 'your client'}.</p>`
-                }
-            })
+            if (freelancerProfile?.email) {
+                await supabase.functions.invoke('send-email', {
+                    body: {
+                        to: freelancerProfile.email,
+                        subject: `Contract Accepted: ${contract.title}`,
+                        html: `<p>Your contract <strong>${escapeHtml(contract.title)}</strong> has been accepted by ${escapeHtml(contract.clients?.name || 'your client')}.</p>`
+                    }
+                })
+            }
 
             setContract({ ...contract, status: 'accepted', signed_date: new Date().toISOString() })
-            alert('Contract accepted successfully! The freelancer will be notified.')
+            showNotification('Contract accepted! The freelancer has been notified.')
         } catch (err) {
-            console.error('Error accepting contract:', err)
-            alert('Failed to accept contract. Please try again.')
+            showNotification('Failed to accept contract. Please try again.', 'error')
         } finally {
             setActionLoading(false)
         }
     }
 
     const handleReject = async () => {
-        if (!rejectionReason.trim()) {
-            alert('Please provide a reason for rejection.')
-            return
-        }
+        if (!rejectionReason.trim()) return
         setActionLoading(true)
         try {
             const { error } = await supabase
@@ -106,21 +110,21 @@ export default function ContractView() {
 
             if (error) throw error
 
-            // Notify freelancer directly via edge function (public clients can't insert email_logs)
-            await supabase.functions.invoke('send-email', {
-                body: {
-                    to: freelancerProfile?.email,
-                    subject: `Contract Rejected: ${contract.title}`,
-                    html: `<p>Your contract <strong>${contract.title}</strong> was rejected by ${contract.clients?.name || 'your client'}.</p><p><strong>Reason:</strong> ${rejectionReason}</p>`
-                }
-            })
+            if (freelancerProfile?.email) {
+                await supabase.functions.invoke('send-email', {
+                    body: {
+                        to: freelancerProfile.email,
+                        subject: `Contract Rejected: ${contract.title}`,
+                        html: `<p>Your contract <strong>${escapeHtml(contract.title)}</strong> was rejected by ${escapeHtml(contract.clients?.name || 'your client')}.</p><p><strong>Reason:</strong> ${escapeHtml(rejectionReason)}</p>`
+                    }
+                })
+            }
 
             setContract({ ...contract, status: 'rejected', rejection_reason: rejectionReason })
             setShowRejectModal(false)
-            alert('Contract rejected. The freelancer will be notified with your feedback.')
+            showNotification('Contract rejected. The freelancer has been notified.')
         } catch (err) {
-            console.error('Error rejecting contract:', err)
-            alert('Failed to reject contract. Please try again.')
+            showNotification('Failed to reject contract. Please try again.', 'error')
         } finally {
             setActionLoading(false)
         }
@@ -149,6 +153,14 @@ export default function ContractView() {
     return (
         <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto space-y-8">
+                {notification && (
+                    <div className={`rounded-xl px-4 py-3 text-sm font-medium flex items-center gap-2
+                        ${notification.type === 'error'
+                            ? 'bg-red-50 text-red-800 border border-red-200'
+                            : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}`}>
+                        {notification.msg}
+                    </div>
+                )}
                 {/* Header Actions */}
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 no-print">
                     <div>

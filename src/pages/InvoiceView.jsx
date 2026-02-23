@@ -13,6 +13,12 @@ export default function InvoiceView() {
     const [showRejectModal, setShowRejectModal] = useState(false)
     const [rejectionReason, setRejectionReason] = useState('')
     const [isOwner, setIsOwner] = useState(false)
+    const [notification, setNotification] = useState(null)
+
+    const showNotification = (msg, type = 'success') => {
+        setNotification({ msg, type })
+        setTimeout(() => setNotification(null), 4000)
+    }
 
     useEffect(() => {
         async function fetchInvoice() {
@@ -45,7 +51,6 @@ export default function InvoiceView() {
                     if (profileData) setFreelancerProfile(profileData)
                 }
             } catch (error) {
-                console.error('Error fetching invoice:', error)
             } finally {
                 setLoading(false)
             }
@@ -54,8 +59,10 @@ export default function InvoiceView() {
         fetchInvoice()
     }, [token])
 
+    // Helper to escape user-provided text before interpolating into email HTML
+    const escapeHtml = (str) => String(str).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+
     const handleApprove = async () => {
-        if (!confirm('Do you approve this invoice and agree to proceed with payment?')) return
         setActionLoading(true)
         try {
             const { error } = await supabase
@@ -69,32 +76,30 @@ export default function InvoiceView() {
 
             if (error) throw error
 
-            // Notify freelancer directly via edge function (public clients can't insert email_logs)
-            await supabase.functions.invoke('send-email', {
-                body: {
-                    to: freelancerProfile?.email,
-                    subject: `Invoice Approved: #${invoice.id.slice(0, 8)}`,
-                    html: `<p>Your invoice <strong>#${invoice.id.slice(0, 8)}</strong> has been approved by ${invoice.clients?.name || 'your client'}. Payment is being processed.</p>`
-                }
-            })
+            if (freelancerProfile?.email) {
+                await supabase.functions.invoke('send-email', {
+                    body: {
+                        to: freelancerProfile.email,
+                        subject: `Invoice Approved: #${invoice.id.slice(0, 8)}`,
+                        html: `<p>Your invoice <strong>#${escapeHtml(invoice.id.slice(0, 8))}</strong> has been approved by ${escapeHtml(invoice.clients?.name || 'your client')}. Payment is being processed.</p>`
+                    }
+                })
+            }
 
-            setInvoice({ ...invoice, status: 'approved', approved_date: new Date().toISOString() })
-            alert('Invoice approved! Redirecting to payment...')
-            // Trigger payment after approval
-            setTimeout(() => handlePayment(), 1000)
+            const approvedInvoice = { ...invoice, status: 'approved', approved_date: new Date().toISOString() }
+            setInvoice(approvedInvoice)
+            showNotification('Invoice approved! Redirecting to payment...')
+            // Pass the fresh invoice directly to avoid stale-closure issue
+            handlePayment(approvedInvoice)
         } catch (err) {
-            console.error('Error approving invoice:', err)
-            alert('Failed to approve invoice. Please try again.')
+            showNotification('Failed to approve invoice. Please try again.', 'error')
         } finally {
             setActionLoading(false)
         }
     }
 
     const handleReject = async () => {
-        if (!rejectionReason.trim()) {
-            alert('Please provide a reason for rejection.')
-            return
-        }
+        if (!rejectionReason.trim()) return
         setActionLoading(true)
         try {
             const { error } = await supabase
@@ -109,72 +114,68 @@ export default function InvoiceView() {
 
             if (error) throw error
 
-            // Notify freelancer directly via edge function (public clients can't insert email_logs)
-            await supabase.functions.invoke('send-email', {
-                body: {
-                    to: freelancerProfile?.email,
-                    subject: `Invoice Rejected: #${invoice.id.slice(0, 8)}`,
-                    html: `<p>Your invoice <strong>#${invoice.id.slice(0, 8)}</strong> was rejected by ${invoice.clients?.name || 'your client'}.</p><p><strong>Reason:</strong> ${rejectionReason}</p>`
-                }
-            })
+            if (freelancerProfile?.email) {
+                await supabase.functions.invoke('send-email', {
+                    body: {
+                        to: freelancerProfile.email,
+                        subject: `Invoice Rejected: #${invoice.id.slice(0, 8)}`,
+                        html: `<p>Your invoice <strong>#${escapeHtml(invoice.id.slice(0, 8))}</strong> was rejected by ${escapeHtml(invoice.clients?.name || 'your client')}.</p><p><strong>Reason:</strong> ${escapeHtml(rejectionReason)}</p>`
+                    }
+                })
+            }
 
-            setInvoice({ ...invoice, status: 'rejected', rejection_reason: rejectionReason })
+            setInvoice({ ...invoice, status: 'rejected', rejection_reason: rejectionReason, rejection_date: new Date().toISOString() })
             setShowRejectModal(false)
-            alert('Invoice rejected. The freelancer will be notified with your feedback.')
+            showNotification('Invoice rejected. The freelancer will be notified.')
         } catch (err) {
-            console.error('Error rejecting invoice:', err)
-            alert('Failed to reject invoice. Please try again.')
+            showNotification('Failed to reject invoice. Please try again.', 'error')
         } finally {
             setActionLoading(false)
         }
     }
 
-    const handlePayment = () => {
-        // Check if invoice is approved or pending
-        if (invoice.status !== 'approved' && invoice.status !== 'pending') {
-            alert('This invoice cannot be paid at this time.')
-            return
-        }
+    const handlePayment = (inv = invoice) => {
+        if (inv.status !== 'approved' && inv.status !== 'pending') return
 
-        // Load Razorpay script
+        const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')
+        if (existing) { initializeRazorpay(inv); return }
+
         const script = document.createElement('script')
         script.src = 'https://checkout.razorpay.com/v1/checkout.js'
         script.async = true
-        script.onload = () => initializeRazorpay()
-        script.onerror = () => alert('Failed to load payment gateway. Please try again later.')
+        script.onload = () => initializeRazorpay(inv)
+        script.onerror = () => showNotification('Failed to load payment gateway. Please try again.', 'error')
         document.body.appendChild(script)
     }
 
-    const initializeRazorpay = async () => {
+    const initializeRazorpay = async (inv = invoice) => {
+        const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID
+        if (!razorpayKey) {
+            showNotification('Payment gateway is not configured. Please contact support.', 'error')
+            return
+        }
         try {
-            // Create Razorpay order (in production, this should be done via your backend)
             const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_1234567890',
-                amount: Math.round(invoice.amount * 100), // Amount in paise
-                currency: invoice.currency || 'USD',
+                key: razorpayKey,
+                amount: Math.round(parseFloat(String(inv.amount)) * 100),
+                currency: inv.currency || 'USD',
                 name: freelancerProfile?.business_name || 'Dustbill',
-                description: `Invoice #${invoice.id.slice(0, 8)}`,
-                image: '/logo.png', // Optional: Add your logo
+                description: `Invoice #${inv.id.slice(0, 8)}`,
+                image: '/logo.png',
                 handler: async function (response) {
                     await handlePaymentSuccess(response)
                 },
                 prefill: {
-                    name: invoice.clients?.name,
-                    email: invoice.clients?.email,
-                    contact: invoice.clients?.phone
+                    name: inv.clients?.name,
+                    email: inv.clients?.email,
+                    contact: inv.clients?.phone
                 },
                 notes: {
-                    invoice_id: invoice.id,
-                    invoice_number: invoice.id.slice(0, 8)
+                    invoice_id: inv.id,
+                    invoice_number: inv.id.slice(0, 8)
                 },
-                theme: {
-                    color: '#A582F7'
-                },
-                modal: {
-                    ondismiss: function() {
-                        console.log('Payment cancelled by user')
-                    }
-                }
+                theme: { color: '#A582F7' },
+                modal: { ondismiss: function() {} }
             }
 
             const razorpay = new window.Razorpay(options)
@@ -183,8 +184,7 @@ export default function InvoiceView() {
             })
             razorpay.open()
         } catch (error) {
-            console.error('Payment initialization error:', error)
-            alert('Failed to initialize payment. Please try again.')
+            showNotification('Failed to initialize payment. Please try again.', 'error')
         }
     }
 
@@ -218,26 +218,24 @@ export default function InvoiceView() {
             if (paymentError) throw paymentError
 
             // Notify freelancer directly via edge function (public clients can't insert email_logs)
-            await supabase.functions.invoke('send-email', {
-                body: {
-                    to: freelancerProfile?.email,
-                    subject: `Payment Received: Invoice #${invoice.id.slice(0, 8)}`,
-                    html: `<p>Payment has been successfully received for invoice <strong>#${invoice.id.slice(0, 8)}</strong> from ${invoice.clients?.name || 'your client'}. Amount: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.amount)}</p>`
-                }
-            })
+            if (freelancerProfile?.email) {
+                await supabase.functions.invoke('send-email', {
+                    body: {
+                        to: freelancerProfile.email,
+                        subject: `Payment Received: Invoice #${invoice.id.slice(0, 8)}`,
+                        html: `<p>Payment has been successfully received for invoice <strong>#${escapeHtml(invoice.id.slice(0, 8))}</strong> from ${escapeHtml(invoice.clients?.name || 'your client')}. Amount: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.amount)}</p>`
+                    }
+                })
+            }
 
             setInvoice({ ...invoice, status: 'paid' })
-            alert('Payment Successful! Thank you for your payment.')
+            showNotification('Payment successful! Thank you.')
         } catch (err) {
-            console.error('Error updating payment:', err)
-            alert('Payment received but there was an error updating the system. Please contact support.')
+            showNotification('Payment received but failed to update status. Contact support.', 'error')
         }
     }
 
     const handlePaymentFailure = async (response) => {
-        console.error('Payment failed:', response.error)
-        
-        // Record failed payment attempt
         try {
             await supabase.from('payments').insert({
                 invoice_id: invoice.id,
@@ -248,10 +246,8 @@ export default function InvoiceView() {
                 payment_method: 'razorpay'
             })
         } catch (err) {
-            console.error('Error recording failed payment:', err)
         }
-
-        alert(`Payment Failed: ${response.error.description || 'Please try again or contact support.'}`)
+        showNotification(response.error.description || 'Payment failed. Please try again.', 'error')
     }
 
     const handlePrint = () => {
@@ -268,6 +264,16 @@ export default function InvoiceView() {
 
     return (
         <div className="min-h-screen bg-slate-100 py-10 px-4 sm:px-6 lg:px-8 print:bg-white print:p-0">
+            {/* Notification banner */}
+            {notification && (
+                <div className={`max-w-4xl mx-auto mb-4 rounded-xl px-4 py-3 text-sm font-medium no-print flex items-center gap-2
+                    ${notification.type === 'error'
+                        ? 'bg-red-50 text-red-800 border border-red-200'
+                        : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}`}>
+                    {notification.msg}
+                </div>
+            )}
+
             {/* Action Bar */}
             <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 no-print">
                 <div>
@@ -281,7 +287,7 @@ export default function InvoiceView() {
                         onClick={handlePrint}
                         className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
                     >
-                        <Download className="h-4 w-4" /> Download PDF
+                        <Download className="h-4 w-4" /> Print / Save as PDF
                     </button>
 
                     {isOwner && (

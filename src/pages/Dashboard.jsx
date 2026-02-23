@@ -40,7 +40,7 @@ export default function Dashboard() {
                 setInvoices(invRes.data || [])
                 setClients(clientRes.data || [])
             } catch (err) {
-                console.error('Dashboard fetch error:', err)
+                // fetch failed — dashboard stays empty
             } finally {
                 setLoading(false)
             }
@@ -327,7 +327,7 @@ export default function Dashboard() {
                                             <p className="text-sm font-semibold text-foreground truncate">{inv.clients?.name || 'Unknown'}</p>
                                             <div className="flex items-center gap-2 mt-0.5">
                                                 <p className="text-[10px] text-muted-foreground font-mono">#{inv.id.slice(0, 8)}</p>
-                                                <span className="sm:hidden inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
+                                                <span className="sm:hidden inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
                                                     style={{ backgroundColor: statusCfg.fill + '1a', color: statusCfg.fill }}>
                                                     {statusCfg.label}
                                                 </span>

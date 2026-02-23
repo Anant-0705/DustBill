@@ -12,6 +12,7 @@ export default function CreateContract() {
     const { user } = useAuthStore()
     const [loading, setLoading] = useState(false)
     const [showPreview, setShowPreview] = useState(true)
+    const [formError, setFormError] = useState('')
     const [clients, setClients] = useState([])
 
     const [formData, setFormData] = useState({
@@ -62,15 +63,16 @@ export default function CreateContract() {
             if (error) throw error
             setClients(data || [])
         } catch (err) {
-            console.error('Error fetching clients:', err)
+            // clients list is optional — fail silently
         }
     }
 
     const handleSubmit = async (status = 'draft') => {
         if (!user) return
-        if (!formData.title.trim()) return alert('Contract title is required.')
-        if (!formData.client_id) return alert('Please select a client.')
-        if (!formData.content.trim()) return alert('Contract content is required.')
+        if (!formData.title.trim()) return setFormError('Contract title is required.')
+        if (!formData.client_id) return setFormError('Please select a client.')
+        if (!formData.content.trim()) return setFormError('Contract content is required.')
+        setFormError('')
 
         setLoading(true)
         try {
@@ -115,22 +117,12 @@ export default function CreateContract() {
 
             // Send email if status is 'sent'
             if (status === 'sent' && contractData) {
-                const emailResult = await emailService.sendContractEmail(contractData, 'contract_sent')
-                if (emailResult.success) {
-                    console.log('✅ Contract email notification logged:', emailResult.data)
-                    console.log('📧 Check your Supabase email_logs table to verify')
-                } else {
-                    console.warn('⚠️ Contract email notification failed:', emailResult.error)
-                }
+                await emailService.sendContractEmail(contractData, 'contract_sent')
             }
 
-            alert(status === 'sent' 
-                ? '✅ Contract saved & sent!\n\n📧 Email logged to database.\n💡 Check Supabase → email_logs table to verify.'
-                : 'Contract saved successfully!')
             navigate('/contracts')
         } catch (error) {
-            console.error('Error saving contract:', error)
-            alert('Failed to save contract. Please try again.')
+            setFormError('Failed to save contract. Please try again.')
         } finally {
             setLoading(false)
         }
@@ -149,17 +141,23 @@ export default function CreateContract() {
                     className="mb-5 transition-all duration-300 ease-in-out"
                     style={{
                         opacity: headerVisible ? 1 : 0,
-                        maxHeight: headerVisible ? '140px' : '0px',
+                        maxHeight: headerVisible ? '200px' : '0px',
                         marginBottom: headerVisible ? '20px' : '0px',
                         overflow: 'hidden',
                     }}
                 >
                     <div className="bg-card rounded-2xl border border-border px-4 py-3 shadow-sm">
+                        {formError && (
+                            <div className="mb-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs font-medium text-red-700">
+                                {formError}
+                            </div>
+                        )}
                         {/* Row 1: back + title + desktop actions */}
                         <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-3 min-w-0">
                                 <button
                                     onClick={() => navigate('/contracts')}
+                                    aria-label="Back to contracts"
                                     className="h-8 w-8 shrink-0 rounded-lg bg-muted hover:bg-accent flex items-center justify-center transition-colors"
                                 >
                                     <ArrowLeft className="h-4 w-4 text-muted-foreground" />

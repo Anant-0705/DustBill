@@ -53,7 +53,7 @@ export default function Invoices() {
             if (error) throw error
             setInvoices(data || [])
         } catch (error) {
-            console.error('Error fetching invoices:', error)
+            // fetch failed — list stays empty
         } finally {
             setLoading(false)
         }
@@ -65,7 +65,7 @@ export default function Invoices() {
             if (error) throw error
             setInvoices(prev => prev.filter(inv => inv.id !== id))
         } catch (error) {
-            console.error('Delete error:', error)
+            // delete failed silently
         }
     }
 
@@ -84,7 +84,7 @@ export default function Invoices() {
             if (error) throw error
             setInvoices(prev => [data, ...prev])
         } catch (error) {
-            console.error('Duplicate error:', error)
+            // duplicate failed silently
         }
     }
 
@@ -100,17 +100,12 @@ export default function Invoices() {
             
             // Send email notification to client if they have an email
             if (invoice.clients?.email) {
-                const emailResult = await emailService.sendInvoiceEmail(invoice, 'invoice_sent')
-                if (emailResult.success) {
-                    console.log('Invoice email sent successfully')
-                } else {
-                    console.warn('Failed to send invoice email:', emailResult.error)
-                }
+                await emailService.sendInvoiceEmail(invoice, 'invoice_sent')
             }
             
             setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: 'pending', client_email_sent: true } : inv))
         } catch (error) {
-            console.error('Update error:', error)
+            // mark-as-sent failed silently
         }
     }
 

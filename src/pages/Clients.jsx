@@ -16,6 +16,7 @@ export default function Clients() {
     const [editingClient, setEditingClient] = useState(null)
     const [expandedClient, setExpandedClient] = useState(null)
     const [form, setForm] = useState({ name: '', email: '', phone: '', address: '' })
+    const [formError, setFormError] = useState('')
     const { user } = useAuthStore()
 
     useEffect(() => { fetchClients() }, [user])
@@ -31,14 +32,15 @@ export default function Clients() {
             if (error) throw error
             setClients(data || [])
         } catch (err) {
-            console.error('Error fetching clients:', err)
+            // fetch failed — list stays empty
         } finally {
             setLoading(false)
         }
     }
 
     async function saveClient() {
-        if (!form.name.trim()) return alert('Client name is required.')
+        if (!form.name.trim()) { setFormError('Client name is required.'); return }
+        setFormError('')
         try {
             if (editingClient) {
                 const { error } = await supabase
@@ -57,20 +59,17 @@ export default function Clients() {
             }
             closeModal()
         } catch (err) {
-            console.error('Save error:', err)
-            alert('Failed to save client.')
+            setFormError('Failed to save client. Please try again.')
         }
     }
 
     async function deleteClient(id) {
-        if (!confirm('Delete this client? This will not delete their invoices.')) return
         try {
             const { error } = await supabase.from('clients').delete().eq('id', id)
             if (error) throw error
             setClients(prev => prev.filter(c => c.id !== id))
         } catch (err) {
-            console.error('Delete error:', err)
-            alert('Failed to delete client.')
+            // delete failed silently
         }
     }
 
@@ -91,6 +90,7 @@ export default function Clients() {
         setShowModal(false)
         setEditingClient(null)
         setForm({ name: '', email: '', phone: '', address: '' })
+        setFormError('')
     }
 
     const filtered = clients.filter(c => {
@@ -252,6 +252,11 @@ export default function Clients() {
                         </div>
 
                         <div className="space-y-4">
+                            {formError && (
+                                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs font-medium text-red-700">
+                                    {formError}
+                                </div>
+                            )}
                             <div>
                                 <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Name *</label>
                                 <input className={inputCls} placeholder="Client name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />

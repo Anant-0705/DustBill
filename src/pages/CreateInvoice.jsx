@@ -27,6 +27,7 @@ export default function CreateInvoice() {
     const [showPreview, setShowPreview] = useState(true)
     const [showColorPicker, setShowColorPicker] = useState(false)
     const [brandColor, setBrandColor] = useState('#A582F7')
+    const [formError, setFormError] = useState('')
 
     // Existing clients
     const [existingClients, setExistingClients] = useState([])
@@ -145,11 +146,11 @@ export default function CreateInvoice() {
     const handleSubmit = async (status = 'draft') => {
         if (!user) return
 
-        // Validate client email before sending
         if (status === 'pending' && !client.email.trim()) {
-            alert('Please enter the client\'s email address before sending the invoice.')
+            setFormError('Please enter the client\'s email address before sending.')
             return
         }
+        setFormError('')
 
         setLoading(true)
         try {
@@ -170,10 +171,7 @@ export default function CreateInvoice() {
                         clients: { ...editInvoice.clients, email: editInvoice.clients.email }
                     }
                     const emailResult = await emailService.sendInvoiceEmail(invoiceWithClient, 'invoice_sent')
-                    if (!emailResult.success) {
-                        console.error('Email failed:', emailResult.error)
-                        alert('Invoice saved, but failed to send email notification. Check your Supabase Edge Function and RESEND_API_KEY configuration.')
-                    }
+                    if (!emailResult.success) { /* email failed silently; invoice already saved */ }
                 }
             } else {
                 // ── Create new invoice ──
@@ -181,18 +179,23 @@ export default function CreateInvoice() {
 
                 // Check if client with that email already exists for this user
                 let clientId
-                const { data: existingClient } = await supabase
+
+                // Only search by email if one was actually provided — an empty string
+                // would match every client whose email is empty, corrupting random records
+                const emailTrimmed = client.email.trim()
+                const existingClient = emailTrimmed ? (await supabase
                     .from('clients')
                     .select('id')
                     .eq('user_id', user.id)
-                    .eq('email', client.email)
-                    .maybeSingle()
+                    .eq('email', emailTrimmed)
+                    .maybeSingle()).data : null
 
                 if (existingClient) {
                     // Update existing client with new info
-                    await supabase.from('clients')
+                    const { error: updateError } = await supabase.from('clients')
                         .update({ name: client.name, phone: client.phone, address: client.address })
                         .eq('id', existingClient.id)
+                    if (updateError) throw updateError
                     clientId = existingClient.id
                 } else {
                     // Create new client
@@ -219,16 +222,12 @@ export default function CreateInvoice() {
                         clients: { name: client.name, email: client.email }
                     }
                     const emailResult = await emailService.sendInvoiceEmail(invoiceWithClient, 'invoice_sent')
-                    if (!emailResult.success) {
-                        console.error('Email failed:', emailResult.error)
-                        alert('Invoice saved, but failed to send email notification. Check your Supabase Edge Function and RESEND_API_KEY configuration.')
-                    }
+                    if (!emailResult.success) { /* email failed silently; invoice already saved */ }
                 }
             }
             navigate('/invoices')
         } catch (error) {
-            console.error('Error saving invoice:', error)
-            alert('Failed to save invoice. Please try again.')
+            setFormError('Failed to save invoice. Please try again.')
         } finally { setLoading(false) }
     }
 
@@ -250,7 +249,7 @@ export default function CreateInvoice() {
                     className="mb-5 transition-all duration-300 ease-in-out"
                     style={{
                         opacity: headerVisible ? 1 : 0,
-                        maxHeight: headerVisible ? '140px' : '0px',
+                        maxHeight: headerVisible ? '200px' : '0px',
                         marginBottom: headerVisible ? '20px' : '0px',
                         overflow: 'hidden',
                     }}
@@ -261,6 +260,7 @@ export default function CreateInvoice() {
                             <div className="flex items-center gap-3 min-w-0">
                                 <button
                                     onClick={() => navigate('/invoices')}
+                                    aria-label="Back to invoices"
                                     className="h-8 w-8 shrink-0 rounded-lg bg-muted hover:bg-accent flex items-center justify-center transition-colors"
                                 >
                                     <ArrowLeft className="h-4 w-4 text-muted-foreground" />
@@ -320,6 +320,12 @@ export default function CreateInvoice() {
                                 </button>
                             </div>
                         </div>
+                        {/* Error banner - all screen sizes */}
+                        {formError && (
+                            <div className="mt-2.5 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs font-medium text-red-700">
+                                {formError}
+                            </div>
+                        )}
                         {/* Row 2: mobile action buttons */}
                         <div className="flex lg:hidden items-center gap-2 mt-2.5">
                             <button
@@ -347,7 +353,7 @@ export default function CreateInvoice() {
                     <div className="fixed top-auto bottom-4 right-4 sm:top-28 sm:bottom-auto sm:right-10 z-40 bg-card rounded-2xl border border-border shadow-xl p-4 w-64">
                         <div className="flex items-center justify-between mb-3">
                             <span className="text-xs font-bold text-foreground">Brand Color</span>
-                            <button onClick={() => setShowColorPicker(false)}><X className="h-3.5 w-3.5 text-muted-foreground" /></button>
+                            <button onClick={() => setShowColorPicker(false)} aria-label="Close color picker"><X className="h-3.5 w-3.5 text-muted-foreground" /></button>
                         </div>
                         <div className="grid grid-cols-7 gap-2 mb-3">
                             {PRESET_COLORS.map(c => (
@@ -429,6 +435,7 @@ export default function CreateInvoice() {
                                                     <div className="text-[10px] text-muted-foreground">Click to change or drag a new file</div>
                                                 </div>
                                                 <button onClick={(e) => { e.stopPropagation(); setLogo(null) }}
+                                                    aria-label="Remove logo"
                                                     className="h-7 w-7 rounded-lg bg-muted hover:bg-destructive/10 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors">
                                                     <X className="h-3.5 w-3.5" />
                                                 </button>
@@ -685,7 +692,7 @@ export default function CreateInvoice() {
                                             {/* Items table */}
                                             <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: brandColor }}>Order Details</div>
                                             <div className="border border-gray-200 rounded-lg overflow-hidden mb-5">
-                                                <div className="grid grid-cols-12 gap-0 text-[9px] font-bold text-white px-4 py-2" style={{ backgroundColor: brandColor }}>
+                                                <div className="grid grid-cols-12 gap-0 text-[10px] font-bold text-white px-4 py-2" style={{ backgroundColor: brandColor }}>
                                                     <div className="col-span-5">Item</div>
                                                     <div className="col-span-2 text-center">Qty</div>
                                                     <div className="col-span-2 text-right">Rate</div>
@@ -721,7 +728,7 @@ export default function CreateInvoice() {
                                             {/* Notes */}
                                             {invoiceDetails.notes && (
                                                 <div className="mt-5 pt-3 border-t border-gray-100">
-                                                    <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Notes</div>
+                                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Notes</div>
                                                     <div className="text-[10px] text-gray-500 leading-relaxed whitespace-pre-wrap">{invoiceDetails.notes}</div>
                                                 </div>
                                             )}
@@ -730,7 +737,7 @@ export default function CreateInvoice() {
                                             <div className="mt-6 pt-3 border-t border-gray-100 text-center">
                                                 <div className="flex items-center justify-center gap-1.5">
                                                     <div className="h-3.5 w-3.5 rounded flex items-center justify-center text-white text-[7px] font-bold" style={{ backgroundColor: brandColor }}>D</div>
-                                                    <span className="text-[9px] font-semibold text-gray-400">Powered by DustBill</span>
+                                                    <span className="text-[10px] font-semibold text-gray-400">Powered by DustBill</span>
                                                 </div>
                                             </div>
                                         </div>
