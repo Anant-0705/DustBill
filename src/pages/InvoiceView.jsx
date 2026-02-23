@@ -12,6 +12,7 @@ export default function InvoiceView() {
     const [actionLoading, setActionLoading] = useState(false)
     const [showRejectModal, setShowRejectModal] = useState(false)
     const [rejectionReason, setRejectionReason] = useState('')
+    const [isOwner, setIsOwner] = useState(false)
 
     useEffect(() => {
         async function fetchInvoice() {
@@ -29,6 +30,10 @@ export default function InvoiceView() {
 
                 if (error) throw error
                 setInvoice(data)
+
+                // Check if viewer is the freelancer/owner
+                const { data: { user } } = await supabase.auth.getUser()
+                if (user && user.id === data.user_id) setIsOwner(true)
 
                 // Fetch freelancer profile separately (no direct FK from invoices to profiles)
                 if (data?.user_id) {
@@ -268,7 +273,7 @@ export default function InvoiceView() {
                 <div>
                     <h1 className="text-xl font-bold text-slate-800">Invoice #{invoice.id.slice(0, 8)}</h1>
                     <p className="text-sm text-slate-500 mt-0.5">
-                        {invoice.status === 'pending' ? 'Review the invoice below and approve or reject it.' : `Status: ${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}`}
+                        {invoice.status === 'pending' && !isOwner ? 'Review the invoice below and approve or reject it.' : `Status: ${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}`}
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
@@ -278,6 +283,12 @@ export default function InvoiceView() {
                     >
                         <Download className="h-4 w-4" /> Download PDF
                     </button>
+
+                    {isOwner && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                            Preview Mode — action buttons are hidden for you as the sender
+                        </span>
+                    )}
 
                     {invoice.status === 'paid' && (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
@@ -295,7 +306,7 @@ export default function InvoiceView() {
                         </span>
                     )}
 
-                    {invoice.status === 'pending' && (
+                    {!isOwner && invoice.status === 'pending' && (
                         <>
                             <button
                                 onClick={() => setShowRejectModal(true)}
@@ -314,7 +325,7 @@ export default function InvoiceView() {
                             </button>
                         </>
                     )}
-                    {invoice.status === 'approved' && (
+                    {!isOwner && invoice.status === 'approved' && (
                         <button
                             onClick={handlePayment}
                             className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition-colors"

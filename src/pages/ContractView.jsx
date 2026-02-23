@@ -13,6 +13,7 @@ export default function ContractView() {
     const [actionLoading, setActionLoading] = useState(false)
     const [showRejectModal, setShowRejectModal] = useState(false)
     const [rejectionReason, setRejectionReason] = useState('')
+    const [isOwner, setIsOwner] = useState(false)
 
     useEffect(() => {
         fetchContract()
@@ -32,6 +33,10 @@ export default function ContractView() {
 
             if (error) throw error
             setContract(data)
+
+            // Check if viewer is the freelancer/owner
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user && user.id === data.user_id) setIsOwner(true)
 
             // Fetch freelancer profile separately (no direct FK from contracts to profiles)
             if (data?.user_id) {
@@ -169,7 +174,11 @@ export default function ContractView() {
                             Please review the contract details below
                         </p>
                     </div>
-                    {contract.status === 'sent' && (
+                    {isOwner ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                            Preview Mode — action buttons are hidden for you as the sender
+                        </span>
+                    ) : contract.status === 'sent' && (
                         <div className="flex flex-wrap gap-3">
                             <button
                                 onClick={() => setShowRejectModal(true)}
