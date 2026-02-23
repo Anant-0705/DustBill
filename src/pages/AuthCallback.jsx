@@ -11,22 +11,25 @@ export default function AuthCallback() {
         // Do NOT call exchangeCodeForSession manually — it conflicts.
         supabase.auth.getSession().then(({ data: { session }, error }) => {
             if (error) {
-                console.error('Auth callback error:', error.message)
                 navigate('/login?error=auth_failed', { replace: true })
             } else if (session) {
                 navigate('/dashboard', { replace: true })
             } else {
                 // Fallback: listen for the SIGNED_IN event in case exchange is still in progress
+                let navigated = false
                 const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
                     if (event === 'SIGNED_IN' && session) {
+                        navigated = true
                         subscription.unsubscribe()
                         navigate('/dashboard', { replace: true })
                     }
                 })
-                // Safety timeout — redirect to login if nothing happens in 5s
+                // Safety timeout — redirect to login only if no navigation has occurred
                 setTimeout(() => {
                     subscription.unsubscribe()
-                    navigate('/login?error=auth_timeout', { replace: true })
+                    if (!navigated) {
+                        navigate('/login?error=auth_timeout', { replace: true })
+                    }
                 }, 5000)
             }
         })

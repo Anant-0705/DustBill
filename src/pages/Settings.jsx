@@ -63,8 +63,7 @@ export default function Settings() {
             if (error) throw error
             showSaved()
         } catch (err) {
-            console.error('Profile save error:', err)
-            alert('Failed to update profile.')
+            // save failed silently
         } finally {
             setSaving(false)
         }

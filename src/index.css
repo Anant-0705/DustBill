@@ -85,4 +85,9 @@
   .dark input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(1);
   }
+
+  /* Firefox: use color-scheme so the native date picker respects dark mode */
+  .dark input[type="date"] {
+    color-scheme: dark;
+  }
 }

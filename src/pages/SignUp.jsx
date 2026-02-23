@@ -12,6 +12,7 @@ export default function SignUp() {
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+    const [successMsg, setSuccessMsg] = useState('')
     const navigate = useNavigate()
     const { setSession, setUser } = useAuthStore()
 
@@ -46,7 +47,7 @@ export default function SignUp() {
             if (data.session) {
                 navigate('/dashboard')
             } else {
-                alert('Check your email for a confirmation link!')
+                setSuccessMsg('Check your email for a confirmation link!')
             }
         } catch (err) {
             setError(err.message)
@@ -172,6 +173,7 @@ export default function SignUp() {
                                 />
                                 <button
                                     type="button"
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                                     onClick={() => setShowPassword(!showPassword)}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                                 >
@@ -183,6 +185,12 @@ export default function SignUp() {
                         {error && (
                             <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3 text-xs font-medium text-destructive">
                                 {error}
+                            </div>
+                        )}
+
+                        {successMsg && (
+                            <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-xs font-medium text-emerald-700">
+                                {successMsg}
                             </div>
                         )}
 
