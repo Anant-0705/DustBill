@@ -172,6 +172,4 @@ If you encounter issues:
 
 For more help, check the documentation in the `/docs` folder.
 
-## 📞 Support
 
-For questions or issues, please refer to the documentation or create an issue in the repository.
